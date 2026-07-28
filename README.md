@@ -1,17 +1,60 @@
-# vox-broll/
+# Vox B-roll
 
-> L2 | 父级: /apps/README.md
+把一个主题做成可审阅、可继续制作的 Vox 风格 B-roll 解说片：清楚的观点、纸质拼贴视觉、真实旁白、逐段场景和最终交付都保留在同一个 Recut 项目中。
 
-成员清单
-manifest.json: 唯一运行时配置，声明 B-roll 的 JS 入口、SQLite/Artifact/媒体合成权限、统一 operations 的调用说明、输入 schema 与暴露面；`delivery.export` 仅面向 UI，将两条顺序轨与基础设置交给平台创建新的 video Asset。
-AGENTS.md: B-roll 七阶段创作契约、中文 Vox 提示词/导演语言与媒体执行边界；定义关键画面的五段拼贴结构、场景视频的六段运动/稳定结构、叙事弧与镜头节奏，规定声音先于场景视频、Keyframes 必须图文配对，并强制图片、旁白和 Scene 分别调用 Recut MCP 媒体 API；有旁白的 Seedance Scene 必须逐字约束唯一人声，平台媒体调用不是本地视频创作，禁止用 HyperFrames、通用视频 Skill 或本地渲染替代。
-background.js: 自行创建 briefs/resources SQLite 表并发布 Artifact；定义并校验七种资源的输入/输出契约，强制 Keyframes 保存图片、Audio 每段保存真实语音 `assetId`，要求视频提示词逐字绑定旁白且禁止额外人声，将昂贵视频拆为每 Beat 一个 Scene resource；最终阶段不经过 AI，校验两条连续轨道并调用 `ctx.media.compose` 导出新的 video Asset、保存 Delivery 记录。
-ui/index.html: React/Vite 开发入口。
-ui/src/: B-roll 的 React UI 源码、宿主事件订阅与样式；以多面板工作台同时预览所有创作阶段。
-ui/package.json: UI 独立构建依赖与 Vite 命令。
-ui/dist/: Vite 构建产物，manifest 的项目 UI 入口。
+## 在 Recut 中使用
 
-服务边界
-此 App 只覆盖 B-roll：主题到 Vox 风格纸质拼贴解说片。平台不理解 Brief/Look 数据结构；`background.js` 通过 SQLite/Artifact capability 自行实现。Agent 通过 MCP 的 `tools/list` 获得 operation 的名称、说明和 input schema；`workflow.context` 再返回当前有效资源、阶段准入、下一步动作、逐类资源契约、媒体快照结构和 `mediaExecution` 意图路由，是创作时的唯一真相。媒体资产始终由全局素材库 `assetId` 标识；图片生产输入为 `text + imageAssetIds`，异步语音和视频在提交时取得稳定的 queued `assetId`，常驻 Daemon 在同一 ID 上更新状态；视频生产输入为 `text + imageAssetIds + audioAssetIds`，其中音频必须已完成。视频每段独立保存为一个 Scene resource，默认只生成下一段；用户明确要求全部生成时才连续处理剩余段。Delivery 是唯一的确定性阶段：UI 选择 Scene 视频和 Audio 声音放入固定两轨，`delivery.export → ctx.media.compose` 以平台 FFmpeg 渲染并返回新 video Asset；失败诊断可以交给 Agent，但不改变时间线。局部修订通过 `resource.read → resource.update.itemPatch` 保持资源 ID 与依赖不变。领域 AGENTS.md 不重复接口字段。
+1. 打开 [recut.video](https://recut.video)，按页面提示安装本地 Recut service。
+2. 在 **Apps** tab 粘贴以下 HTTPS 地址并安装：
+
+   ```text
+   https://github.com/6174/recut-vox-broll
+   ```
+
+3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**。
+4. 从一个主题开始，和右侧的 Codex 或 Claude Code 对话完成创作。
+
+App 会按以下顺序引导创作，不会把未确认的想法误当成成片：
+
+```text
+Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
+```
+
+- **Brief**：收敛目标观众、核心观点与叙事张力。
+- **Beats**：将观点拆成能看完的节拍。
+- **Look / Keyframes**：确定并生成统一的纸质拼贴视觉。
+- **Audio / Scenes**：先生成真实旁白，再逐段生成可预览的视频。
+- **Delivery**：在界面中排列已确认的视频和音频轨道，导出最终视频。
+
+视频生成昂贵：默认只生成当前下一段 Scene。确认它符合预期后，再继续下一段；要批量生成时，请明确告诉 Agent。
+
+## 项目结构
+
+```text
+manifest.json   App 身份、权限、UI 入口和 operation 契约
+AGENTS.md       B-roll 创作规则、提示词结构和 Agent 工作流
+background.js   项目状态、资源契约与平台 capability 调用
+ui/             React/Vite 创作工作台
+```
+
+平台只提供隔离存储、素材、媒体生成、Agent 和导出能力。Brief、节拍、Look、资源依赖与创作决策都属于本 App；它们不会泄漏到其他 App 或项目。
+
+## 开发此 App
+
+```sh
+git clone git@github.com:6174/recut-vox-broll.git
+cd recut-vox-broll/ui
+npm ci
+npm run build
+```
+
+在 Recut 主仓库中，本 App 作为 `apps/vox-broll` submodule 固定。初始化主仓库时运行：
+
+```sh
+git submodule update --init --recursive
+make app-link APP=apps/vox-broll
+```
+
+`manifest.json` 是唯一运行时配置；`AGENTS.md` 是 Agent 的领域指南。修改业务行为或资源契约时，同时更新它们与本 README，保持用户路径、领域规则和实现一致。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 README.md
