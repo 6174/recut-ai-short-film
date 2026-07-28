@@ -1,0 +1,9 @@
+# Local Go and Next.js build artifacts.
+node_modules
+.next
+.cache
+coverage.out
+.DS_Store
+build/
+web/out/
+web/public/releases/

@@ -323,7 +323,7 @@ function exportDelivery(input, ctx) {
     duration,
     format: "MP4 / H.264 + AAC",
     export: `已导出为新素材：${asset.id}`,
-    checklist: ["视频轨已按顺序合成", audioTimeline.length ? "音频轨已按顺序合成" : "未选择音频轨，已导出无声视频", `导出尺寸：${aspectRatio}`, `帧率：${settings.fps || 30} fps`],
+    checklist: ["视频轨已按顺序合成并保留原声", audioTimeline.length ? "音频轨已与视频原声混合" : "未额外选择音频轨", `导出尺寸：${aspectRatio}`, `帧率：${settings.fps || 30} fps`],
     assetId: asset.id,
     videoTimeline,
     audioTimeline,

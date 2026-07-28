@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Resource 类型、共享 Asset SSE 缓存与 React 图文展示原语
- * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的真实视频预览、图片与音视频播放器详情；兼容顶层和历史嵌套视频引用
- * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 的顶层视频并兼容旧多项 Scene
+ * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的真实视频预览、图片与音视频播放器详情；兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
+ * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 与 Delivery 顶层视频并兼容旧多项 Scene
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useEffect, useState } from "react";
@@ -138,10 +138,11 @@ function videoAssetIDs(content: RecordValue) {
 
 export function resourceVideoAssetIDs(resource: Resource) {
   const content = record(resource.content);
+  const exported = resource.kind.toLowerCase() === "delivery" ? text(content.assetId) : "";
   const nested = [content.scenes, content.shots]
     .filter(Array.isArray)
     .flatMap((items) => items.flatMap((item) => videoAssetIDs(record(item))));
-  return [...new Set([...videoAssetIDs(content), ...nested])];
+  return [...new Set([exported, ...videoAssetIDs(content), ...nested].filter(Boolean))];
 }
 
 function audioSnapshotID(value: unknown) {
@@ -160,6 +161,7 @@ function itemDetails(value: RecordValue) {
 
 export function resourceImageAssetIDs(resource: Resource) {
   const content = record(resource.content);
+  if (resource.kind.toLowerCase() === "delivery") return [];
   const lookAssetID = isLook(resource) ? text(record(content.media).assetId) : "";
   const keyframeImages = resource.kind.toLowerCase() === "keyframes" && Array.isArray(content.keyframes)
     ? content.keyframes.map((item) => snapshotAssetID(record(item).image))
@@ -232,7 +234,8 @@ function StageView({ resource, compact }: { resource: Resource; compact: boolean
   const fields = kind === "brief" ? ["topic", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
   const first = fields.map((key) => text(content[key])).find(Boolean) || text(resource.content) || "尚未填写可展示内容";
   if (compact) return <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{first}</p>;
-  return <div className="grid gap-4"><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /><dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} />)}</dl><ItemList items={list} titleKey={kind === "keyframes" ? "关键画面" : kind === "audio" ? "声音时间线" : kind === "scenes" ? "场景视频" : kind === "delivery" ? "检查清单" : "叙事节拍"} /></div>;
+  const exportedVideo = kind === "delivery" ? text(content.assetId) : "";
+  return <div className="grid gap-4">{exportedVideo ? <AssetPlayer assetId={exportedVideo} kind="video" /> : <><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /></>}<dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} />)}</dl><ItemList items={list} titleKey={kind === "keyframes" ? "关键画面" : kind === "audio" ? "声音时间线" : kind === "scenes" ? "场景视频" : kind === "delivery" ? "检查清单" : "叙事节拍"} /></div>;
 }
 
 export function resourceSummary(resource: Resource) {

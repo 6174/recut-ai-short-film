@@ -24,7 +24,7 @@ Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 - **Beats**：将观点拆成能看完的节拍。
 - **Look / Keyframes**：确定并生成统一的纸质拼贴视觉。
 - **Audio / Scenes**：先生成真实旁白，再逐段生成可预览的视频。
-- **Delivery**：在界面中排列已确认的视频和音频轨道，导出最终视频。
+- **Delivery**：在界面中排列已确认的视频和可选音频轨道，导出最终视频；视频原声会保留，额外音频与之混合。
 
 视频生成昂贵：默认只生成当前下一段 Scene。确认它符合预期后，再继续下一段；要批量生成时，请明确告诉 Agent。
 
