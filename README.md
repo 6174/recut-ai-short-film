@@ -12,7 +12,7 @@
    ```
 
 3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**。
-4. 从一个主题开始，和右侧的 Codex 或 Claude Code 对话完成创作。
+4. 新建 Codex 或 Claude Code 对话后，点击“从一个主题开始”“把想法变成论点”或“继续当前创作”引导卡；提示词会写入输入框，仍可编辑后发送。
 
 App 会按以下顺序引导创作，不会把未确认的想法误当成成片：
 
@@ -31,7 +31,7 @@ Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 ## 项目结构
 
 ```text
-manifest.json   App 身份、作者 6174、GitHub 地址、权限、UI 入口和 operation 契约
+manifest.json   App 身份、作者 6174、GitHub 地址、onboarding 引导、权限、UI 入口和 operation 契约
 AGENTS.md       B-roll 创作规则、提示词结构和 Agent 工作流
 background.js   项目状态、资源契约与平台 capability 调用
 ui/             React/Vite 创作工作台

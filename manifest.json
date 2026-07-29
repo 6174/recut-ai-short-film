@@ -9,6 +9,26 @@
   "type": "project",
   "background": "background.js",
   "ui": { "projectView": "ui/dist/index.html" },
+  "onboarding": [
+    {
+      "id": "start-explainer",
+      "title": "从一个主题开始",
+      "description": "把主题收敛为可制作的 Vox 风格解说 Brief。",
+      "prompt": "我想制作一支 Vox 风格 B-roll 解说片，主题是【请在这里填写主题】。请先只帮我完成 Brief：询问必要信息，明确目标观众、核心观点、开场冲突和预期时长；不要提前生成视觉或视频。"
+    },
+    {
+      "id": "shape-an-idea",
+      "title": "把想法变成论点",
+      "description": "从模糊问题出发，找到值得讲清楚的核心观点。",
+      "prompt": "我有一个还不成熟的视频想法：【请在这里填写想法】。请像 Vox 编辑一样和我一起收敛它：先问关键问题，找出可验证的核心观点、观众为什么在意，以及最有力的三秒开场。确认前不要进入 Beats、Look 或媒体生成。"
+    },
+    {
+      "id": "continue-workflow",
+      "title": "继续当前创作",
+      "description": "先读取项目状态，再只推进唯一允许的下一步。",
+      "prompt": "请先调用 workflow.context，告诉我这个 Vox B-roll 项目现在处于哪个阶段、已经确认了什么，以及唯一应该完成的下一步。然后只引导我完成那一步，不要跳过确认或重做已有资源。"
+    }
+  ],
   "permissions": ["sqlite", "artifacts.publish", "media.compose"],
   "operations": [
     {
