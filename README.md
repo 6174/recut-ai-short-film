@@ -31,7 +31,7 @@ Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 ## 项目结构
 
 ```text
-manifest.json   App 身份、权限、UI 入口和 operation 契约
+manifest.json   App 身份、作者 6174、GitHub 地址、权限、UI 入口和 operation 契约
 AGENTS.md       B-roll 创作规则、提示词结构和 Agent 工作流
 background.js   项目状态、资源契约与平台 capability 调用
 ui/             React/Vite 创作工作台
