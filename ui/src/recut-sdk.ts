@@ -1,21 +1,19 @@
 /**
- * [INPUT]: 依赖 Host 注入的 MessageChannel 与浏览器父窗口
- * [OUTPUT]: 对外提供会主动确认就绪的 iframe React UI SDK、项目事件订阅与可靠 Host 调用
+ * [INPUT]: 依赖 Host 注入的 MessageChannel
+ * [OUTPUT]: 对外提供不依赖安全上下文 UUID、带通信诊断日志的 iframe React UI SDK 与项目事件订阅
  * [POS]: vox-broll 的 UI 通信边界；业务 UI 不直接 fetch、访问终端或 SQLite，实时事件由宿主转发
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
-type Request = { id: string; type: "state.query" | "background.call" | "agent.send"; input: Record<string, unknown> };
+type RequestType = "state.query" | "background.call" | "agent.send";
+type Request = { id: string; type: RequestType; input: Record<string, unknown> };
 let port: MessagePort | null = null;
-const pending = new Map<string, { resolve: (value: any) => void; reject: (error: Error) => void }>();
-let resolveConnection: ((value: MessagePort) => void) | null = null;
-const connection = new Promise<MessagePort>((resolve) => { resolveConnection = resolve; });
+const pending = new Map<string, { type: RequestType; resolve: (value: any) => void; reject: (error: Error) => void }>();
+let requestSequence = 0;
 
-function announceReady() {
-  if (window.parent !== window) window.parent.postMessage({ type: "recut.ui.ready" }, "*");
+function requestID() {
+  requestSequence += 1;
+  return `request-${Date.now().toString(36)}-${requestSequence.toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
-
-announceReady();
-const readyTimer = window.setInterval(announceReady, 250);
 
 window.addEventListener("message", (event) => {
   if (event.data?.type === "recut.project.event") {
@@ -28,21 +26,29 @@ window.addEventListener("message", (event) => {
     const request = pending.get(message.data?.id);
     if (!request) return;
     pending.delete(message.data.id);
-    if (message.data.error) request.reject(new Error(message.data.error)); else request.resolve(message.data.result);
+    if (message.data.error) {
+      console.error(`[recut-sdk] response failed id=${message.data.id} type=${request.type}: ${message.data.error}`);
+      request.reject(new Error(message.data.error));
+      return;
+    }
+    console.warn(`[recut-sdk] response received id=${message.data.id} type=${request.type}`);
+    request.resolve(message.data.result);
   };
   port.start();
-  window.clearInterval(readyTimer);
-  resolveConnection?.(port);
-  resolveConnection = null;
+  console.warn(`[recut-sdk] host connected origin=${window.location.origin}`);
   window.dispatchEvent(new Event("recut-sdk-ready"));
 });
 
-async function call(type: Request["type"], input: Record<string, unknown>) {
-  const connectedPort = port ?? await connection;
+function call(type: RequestType, input: Record<string, unknown>) {
   return new Promise<any>((resolve, reject) => {
-    const id = crypto.randomUUID();
-    pending.set(id, { resolve, reject });
-    connectedPort.postMessage({ id, type, input } satisfies Request);
+    const id = requestID();
+    if (!port) {
+      console.warn(`[recut-sdk] request blocked: host not connected id=${id} type=${type}`);
+      return reject(new Error("Recut Host 尚未连接"));
+    }
+    pending.set(id, { type, resolve, reject });
+    console.warn(`[recut-sdk] request sent id=${id} type=${type}`);
+    port.postMessage({ id, type, input } satisfies Request);
   });
 }
 

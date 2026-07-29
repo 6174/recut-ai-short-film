@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 B-roll Scene/Audio 资源、共享 Asset 预览与平台 delivery.export API
- * [OUTPUT]: 对外提供固定视频轨、固定音频轨、顺序预览和基础编码设置的确定性导出工作台
+ * [OUTPUT]: 对外提供不依赖安全上下文 UUID 的固定视频轨、固定音频轨、顺序预览和基础编码设置的确定性导出工作台
  * [POS]: vox-broll Delivery 阶段的专用编辑器；只装配已有 Asset，不把导出意图交给 Agent 创作
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -19,7 +19,11 @@ type ExportResult = { id?: string };
 const mediaURL = (assetId: string) => `/v1/media/assets/${encodeURIComponent(assetId)}/content`;
 const record = (value: unknown): Value => value && typeof value === "object" && !Array.isArray(value) ? value as Value : {};
 const positive = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
-const clipID = (source: Source) => `${source.assetId}-${crypto.randomUUID()}`;
+let clipSequence = 0;
+const clipID = (source: Source) => {
+  clipSequence += 1;
+  return `${source.assetId}-${Date.now().toString(36)}-${clipSequence.toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
 
 function videoSources(resources: Resource[]) {
   return resources.filter((resource) => resource.kind.toLowerCase() === "scenes").flatMap((resource) => {

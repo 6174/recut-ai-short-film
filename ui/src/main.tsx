@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 React、recut UI SDK、共享 Asset SSE 缓存、资源卡片与资源弹窗
- * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图与创建、两轨最终导出、原位更新后的项目事件驱动资源刷新；SDK 早于 React effect 连接时也会读取已有资源
+ * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图与创建、两轨最终导出、原位更新后的项目事件驱动资源刷新及最小通信诊断；SDK 早于 React effect 连接时也会读取已有资源
  * [POS]: vox-broll 的项目 UI 编排层；同时展示全部创作阶段，为所有资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API，不直接访问 HTTP、终端或 SQLite
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -33,7 +33,21 @@ function App() {
   const [creatingStage, setCreatingStage] = useState<Stage | null>(null);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [status, setStatus] = useState("");
-  const refresh = async () => { try { setResources(await recut.state.query("resource.list")); } catch { /* SDK 尚未连接 */ } };
+  const [diagnostic, setDiagnostic] = useState("等待资源连接");
+  const refresh = async () => {
+    setDiagnostic("正在请求资源列表");
+    console.warn("[vox-broll] resource refresh started");
+    try {
+      const nextResources = await recut.state.query("resource.list");
+      setResources(nextResources);
+      setDiagnostic(`资源已同步：${nextResources.length} 项`);
+      console.warn(`[vox-broll] resource refresh completed count=${nextResources.length}`);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "未知错误";
+      setDiagnostic(`资源同步失败：${message}`);
+      console.error("[vox-broll] resource refresh failed", cause);
+    }
+  };
 
   useEffect(() => {
     window.addEventListener("recut-sdk-ready", refresh);
@@ -81,7 +95,7 @@ function App() {
   };
 
   return <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.99_0.012_151),transparent_30rem)] p-4 sm:p-6"><div className="mx-auto max-w-[1440px]">
-    <header className="mb-4 flex items-end justify-between gap-6 border-b border-border/80 pb-4"><div><p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">RECUT APP / VOX B-ROLL</p><h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">视频创作台</h1><p className="mt-1 text-sm text-muted-foreground">从选题到导出，所有素材和创作决定都集中在这里。</p></div></header>
+    <header className="mb-4 flex items-end justify-between gap-6 border-b border-border/80 pb-4"><div><p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">RECUT APP / VOX B-ROLL</p><h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">视频创作台</h1><p className="mt-1 text-sm text-muted-foreground">从选题到导出，所有素材和创作决定都集中在这里。</p><p className="mt-1 font-mono text-[10px] text-muted-foreground" data-testid="resource-diagnostic">诊断 · {diagnostic}</p></div></header>
     <div className="grid gap-5 xl:grid-cols-2">
       <StagePanel onCreate={() => setCreatingStage(stages[0])} onDelete={(resource) => void remove(resource)} onPreview={setPreview} onRetire={(resource) => void retire(resource)} resources={resourcesFor(stages[0])} stage={stages[0]} />
       <StagePanel onCreate={() => setCreatingStage(stages[1])} onDelete={(resource) => void remove(resource)} onPreview={setPreview} onRetire={(resource) => void retire(resource)} resources={resourcesFor(stages[1])} stage={stages[1]} />
