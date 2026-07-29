@@ -1,12 +1,21 @@
 /**
- * [INPUT]: 依赖 Host 注入的 MessageChannel
- * [OUTPUT]: 对外提供 iframe React UI 的 recut UI SDK 与项目事件订阅
+ * [INPUT]: 依赖 Host 注入的 MessageChannel 与浏览器父窗口
+ * [OUTPUT]: 对外提供会主动确认就绪的 iframe React UI SDK、项目事件订阅与可靠 Host 调用
  * [POS]: vox-broll 的 UI 通信边界；业务 UI 不直接 fetch、访问终端或 SQLite，实时事件由宿主转发
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 type Request = { id: string; type: "state.query" | "background.call" | "agent.send"; input: Record<string, unknown> };
 let port: MessagePort | null = null;
 const pending = new Map<string, { resolve: (value: any) => void; reject: (error: Error) => void }>();
+let resolveConnection: ((value: MessagePort) => void) | null = null;
+const connection = new Promise<MessagePort>((resolve) => { resolveConnection = resolve; });
+
+function announceReady() {
+  if (window.parent !== window) window.parent.postMessage({ type: "recut.ui.ready" }, "*");
+}
+
+announceReady();
+const readyTimer = window.setInterval(announceReady, 250);
 
 window.addEventListener("message", (event) => {
   if (event.data?.type === "recut.project.event") {
@@ -22,15 +31,18 @@ window.addEventListener("message", (event) => {
     if (message.data.error) request.reject(new Error(message.data.error)); else request.resolve(message.data.result);
   };
   port.start();
+  window.clearInterval(readyTimer);
+  resolveConnection?.(port);
+  resolveConnection = null;
   window.dispatchEvent(new Event("recut-sdk-ready"));
 });
 
-function call(type: Request["type"], input: Record<string, unknown>) {
+async function call(type: Request["type"], input: Record<string, unknown>) {
+  const connectedPort = port ?? await connection;
   return new Promise<any>((resolve, reject) => {
     const id = crypto.randomUUID();
-    if (!port) return reject(new Error("Recut Host 尚未连接"));
     pending.set(id, { resolve, reject });
-    port.postMessage({ id, type, input } satisfies Request);
+    connectedPort.postMessage({ id, type, input } satisfies Request);
   });
 }
 
