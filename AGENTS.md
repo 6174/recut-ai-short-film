@@ -8,7 +8,7 @@
 
 ## 媒体执行边界
 
-本 App 的图片、旁白和场景视频必须通过 Recut MCP 媒体 API 生成。场景视频的唯一执行路径是 `recut.video.generate_async → resource.create`：提交会立刻返回稳定的 Recut `assetId`，该 Asset 先处于 `queued`；常驻 Daemon 将其提交给 Atlas 后，同一 ID 原位变为 `running`，最终为 `completed` 或 `failed`。`recut.media.get_job` 只用于读取和汇报状态，不能阻塞 Scene 引用的创建；关键画面使用 `recut.image.generate`，旁白使用 `recut.speech.generate_async`。
+所有图片、旁白和场景视频最终都必须成为 Recut Media Asset；任何媒体动作前先读取 `recut.project_context`，以当前平台配置为准。关键画面采用当前图片生成方案：若配置为 Media Platform route，调用 `recut.image.generate`；若配置为 Codex 原生图片生成，则使用宿主提供的 Codex 图片能力。Codex 原生图必须将最终文件写入当前 Recut 项目目录，再调用 `recut.media.import_image` 归档为当前项目的 Asset；只有返回的真实 `assetId` 能用于 Look 或 Keyframe。不得伪造 `assetId` 或只交付对话预览。不得假定 `recut.image.generate` 永远可用。场景视频仍按当前视频 route 调用 `recut.video.generate_async → resource.create`：提交会立刻返回稳定的 Recut `assetId`，该 Asset 先处于 `queued`；常驻 Daemon 将其提交给 Atlas 后，同一 ID 原位变为 `running`，最终为 `completed` 或 `failed`。`recut.media.get_job` 只用于读取和汇报状态，不能阻塞 Scene 引用的创建；旁白按当前语音 route 使用 `recut.speech.generate_async`。
 
 这是 Provider 调用，不是本地视频创作任务。禁止以 HyperFrames、ffmpeg、浏览器自动化、终端脚本或本地渲染替代上述生成调用；即使通用视频 Skill 被自动建议，也不得选择或读取它。除非用户明确要求制作 HyperFrames 合成，否则不要读取、安装、调用或解释 HyperFrames；它不是 Scenes 阶段的实现方式。
 
@@ -73,7 +73,7 @@
 
 对每个已确认的节拍，按这个顺序完成：
 
-1. 基于选定 Look 和该节拍调用 `recut.image.generate` 生成一张 16:9 关键画面；生成失败时如实报告，不能保存文字替代品。
+1. 基于选定 Look、该节拍与 `recut.project_context` 的当前图片方案生成一张 16:9 关键画面。Media Platform route 调用 `recut.image.generate`；Codex 原生方案使用宿主提供的图片能力，并将最终文件写入当前项目后调用 `recut.media.import_image`。只有图片已成为稳定的 Recut Media Asset 并取得真实 `assetId` 后才能继续；生成失败时如实报告，不能保存文字替代品或对话预览。
 2. 取得生成成功的 `assetId` 后，保存一个 Keyframe：`image.assetId` 是新图，`image.text` 是本图原始提示词，`composition`、`headline`、`layers` 解释这张图如何服务叙事。
 3. 将 Look 图片放入 `image.imageAssetIds` 作为风格来源，将当前 Beat 和 Look 的资源 ID 放入 `image.sourceResourceIds`；`image.audioAssetIds` 为空数组。
 

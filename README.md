@@ -22,7 +22,7 @@ Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 
 - **Brief**：收敛目标观众、核心观点与叙事张力。
 - **Beats**：将观点拆成能看完的节拍。
-- **Look / Keyframes**：确定并生成统一的纸质拼贴视觉。
+- **Look / Keyframes**：确定并生成统一的纸质拼贴视觉。关键画面先读取当前平台图片生成方案：可使用 Media Platform 的 `recut.image.generate`，也可使用宿主配置的 Codex 原生图片生成；无论哪种方式，进入资源前都必须成为 Recut Media Asset。Codex 原生图会先写入当前 Recut 项目，再通过 `recut.media.import_image` 归档并取得真实 `assetId`，不能只作为对话预览进入 Look/Keyframe。
 - **Audio / Scenes**：先生成真实旁白，再逐段生成可预览的视频。
 - **Delivery**：在界面中排列已确认的视频和可选音频轨道，导出最终视频；视频原声会保留，额外音频与之混合。
 
