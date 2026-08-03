@@ -11,7 +11,7 @@
    https://github.com/6174/recut-vox-broll
    ```
 
-3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**，填写选题方向、细节描述和预期视频时长（30/60/90/120 秒或自定义），然后点击“交给 Codex 开始”。
+3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**，填写选题方向、细节描述和预期视频时长（30/60/90/120 秒或自定义），然后点击“复制 Prompt 并填入 Agent”。Prompt 会复制到剪贴板并回填右侧输入框，只有你点击发送后 Agent 才会开始工作。
 4. 新建 Codex 或 Claude Code 对话后，点击“从一个主题开始”“把想法变成论点”或“继续当前创作”引导卡；提示词会写入输入框，仍可编辑后发送。
 
 App 会按以下顺序引导创作，不会把未确认的想法误当成成片：

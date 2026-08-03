@@ -1,11 +1,11 @@
 /**
  * [INPUT]: 依赖 React、recut UI SDK、共享 Asset SSE 缓存、资源卡片与资源弹窗
- * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图、无 Brief 项目的起始表单、两轨最终导出、Brief/资源创建或原位更新后的项目事件驱动资源刷新及最小通信诊断；起始表单保存后把 5 秒节拍的 Beats 任务交给 Codex，刷新后按资源 ID 同步已打开详情
+ * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图、无资源项目的起始表单、两轨最终导出、Brief/资源创建或原位更新后的项目事件驱动资源刷新及最小通信诊断；起始表单只生成、复制并回填 5 秒节拍 Prompt，绝不提交 Agent turn，刷新后按资源 ID 同步已打开详情
  * [POS]: vox-broll 的项目 UI 编排层；同时展示全部创作阶段，为所有资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API，不直接访问 HTTP、终端或 SQLite
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { createRoot } from "react-dom/client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateResourceDialog, type ProjectBriefInput, ResourcePreviewDialog } from "./resource-dialogs";
 import { recut } from "./recut-sdk";
 import { StagePanel, type Stage } from "./stage-panel";
@@ -35,17 +35,13 @@ function App() {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [diagnostic, setDiagnostic] = useState("等待资源连接");
-  const checkedInitialBrief = useRef(false);
   const refresh = async () => {
     setDiagnostic("正在请求资源列表");
     console.warn("[vox-broll] resource refresh started");
     try {
       const nextResources = await recut.state.query("resource.list");
       setResources(nextResources);
-      if (!checkedInitialBrief.current) {
-        checkedInitialBrief.current = true;
-        setProjectBriefOpen(!nextResources.some((resource) => resource.kind.toLowerCase() === "brief"));
-      }
+      setProjectBriefOpen(nextResources.length === 0);
       setPreview((current) => current ? nextResources.find((resource) => resource.id === current.id) ?? null : null);
       setDiagnostic(`资源已同步：${nextResources.length} 项`);
       console.warn(`[vox-broll] resource refresh completed count=${nextResources.length}`);
@@ -74,14 +70,11 @@ function App() {
     setStatus("创作请求已发给 Codex；资源完成后会自动出现。 ");
   };
   const startProjectBrief = async (input: ProjectBriefInput) => {
-    const brief = await recut.background.call("brief.create", input) as { id: string };
-    await refresh();
-    try {
-      await recut.agent.send({ prompt: `项目起始表单已保存为 Brief（${brief.id}）。请先调用 workflow.context 并只完成当前允许的 Beats 阶段：围绕选题、细节描述与预期时长输出可审阅的结构化节拍。每个 Beat 的 durationSec 以 5 秒为目标，所有 Beat 合计必须等于 Brief 的 expectedDurationSec；不要让一个关键画面或 Scene 覆盖多个 5 秒节拍。完成 Beats 后停下等待用户确认，绝不提前生成 Look、关键画面、音频或视频。` });
-      setStatus("项目 Brief 已保存，Codex 正在按 5 秒节拍规划内容。 ");
-    } catch {
-      setStatus("项目 Brief 已保存，但当前没有可用的 Codex 会话；创建会话后可从内容结构继续。 ");
-    }
+    const prompt = `我要制作一支 Vox 风格 B-roll 解说片。\n\n项目起始信息：\n- 选题方向：${input.topic}\n- 细节描述：${input.details || "无额外补充"}\n- 预期视频时长：${input.expectedDurationSec} 秒\n\n请严格从 Brief 阶段开始：\n1. 先调用 workflow.context。\n2. 仅调用 brief.create 保存以上选题方向、细节描述和 expectedDurationSec。\n3. 说明你将如何把这个选题收敛为核心观点、目标观众与开场冲突。\n4. 到此停下，等待我确认后再进入 Beats；不要提前生成内容结构、Look、关键画面、音频或视频。\n\n后续进入 Beats 时，整支片必须按约 5 秒一个 Beat、一个 Keyframe、一个 Scene 拆分；总时长 ${input.expectedDurationSec} 秒必须由这些 5 秒节拍覆盖。Look 参考图必须包含全片会出现的主体、道具、信息卡、背景材料与层级，而非只展示色彩风格。`;
+    if (!navigator.clipboard?.writeText) throw new Error("当前环境不支持自动复制，请手动复制右侧输入框中的 Prompt");
+    await navigator.clipboard.writeText(prompt);
+    await recut.agent.compose({ prompt });
+    setStatus("Prompt 已复制，并已写入右侧 Agent 输入框；请确认后手动发送。 ");
   };
   const exportDelivery = async (input: Record<string, unknown>) => {
     const asset = await recut.background.call("delivery.export", input);
