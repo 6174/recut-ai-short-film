@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖平台注入的 ctx.sqlite、ctx.artifacts 与受限 ctx.media.compose capability
- * [OUTPUT]: 注册 B-roll brief、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
+ * [OUTPUT]: 注册 B-roll brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
  * [POS]: vox-broll 的唯一业务后端；数据表、文件和产物模型由本 App 自己定义，最终导出委托平台 Asset 合成
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -48,6 +48,10 @@ function createBrief(input, ctx) {
   ctx.sqlite.execute(
     "insert into briefs (id, topic, title, body, created_at) values (?, ?, ?, ?, ?)",
     [id, topic, brief.title, JSON.stringify(brief), brief.createdAt],
+  );
+  ctx.sqlite.execute(
+    "insert into resources (id, kind, title, content_json, dependencies_json, created_at, retired_at) values (?, ?, ?, ?, ?, ?, null)",
+    [brief.id, "brief", brief.title, JSON.stringify(brief), "[]", brief.createdAt],
   );
   return ctx.artifacts.publish({ type: "recut.vox.brief@1", value: brief });
 }
@@ -284,7 +288,10 @@ function updateResource(input, ctx) {
 function listResources(_, ctx) {
   ensureSchema(ctx);
   purgeInvalidMediaResources(ctx);
-  return ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where retired_at is null order by created_at desc").map((row) => ({ id: row.id, kind: row.kind, title: row.title, content: JSON.parse(row.content_json), dependencies: JSON.parse(row.dependencies_json), createdAt: row.created_at }));
+  const resources = ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where retired_at is null order by created_at desc").map((row) => ({ id: row.id, kind: row.kind, title: row.title, content: JSON.parse(row.content_json), dependencies: JSON.parse(row.dependencies_json), createdAt: row.created_at }));
+  const storedBrief = latestBrief({}, ctx);
+  if (storedBrief && !resources.some((resource) => resource.id === storedBrief.id)) resources.push({ id: storedBrief.id, kind: "brief", title: storedBrief.title, content: storedBrief, dependencies: [], createdAt: storedBrief.createdAt });
+  return resources.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
 }
 
 function retireResource(input, ctx) {

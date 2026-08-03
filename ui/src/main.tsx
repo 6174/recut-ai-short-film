@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 React、recut UI SDK、共享 Asset SSE 缓存、资源卡片与资源弹窗
- * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图与创建、两轨最终导出、原位更新后的项目事件驱动资源刷新及最小通信诊断；SDK 早于 React effect 连接时也会读取已有资源
+ * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图与创建、两轨最终导出、Brief/资源创建或原位更新后的项目事件驱动资源刷新及最小通信诊断；SDK 早于 React effect 连接时也会读取已有资源
  * [POS]: vox-broll 的项目 UI 编排层；同时展示全部创作阶段，为所有资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API，不直接访问 HTTP、终端或 SQLite
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -54,7 +54,7 @@ function App() {
     void refresh();
     const unsubscribe = recut.events.subscribe((event) => {
       const capability = event as CapabilityEvent;
-      if (capability.type === "app.capability.completed" && capability.appId === "recut.vox-broll" && capability.kind === "operation" && ["resource.create", "resource.update"].includes(String(capability.name))) void refresh();
+      if (capability.type === "app.capability.completed" && capability.appId === "recut.vox-broll" && capability.kind === "operation" && ["brief.create", "resource.create", "resource.update"].includes(String(capability.name))) void refresh();
     });
     return () => { window.removeEventListener("recut-sdk-ready", refresh); unsubscribe(); };
   }, []);

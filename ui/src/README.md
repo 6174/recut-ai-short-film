@@ -3,7 +3,7 @@
 > L2 | 父级: /apps/vox-broll/ui/README.md
 
 成员清单
-main.tsx: B-roll 工作台编排层；以两列等宽 panel 网格同时展示七个阶段，并按资源创建或原位更新的项目能力完成事件刷新资源；首次挂载也主动读取一次，避免 iframe SDK 先连上时丢失首个刷新事件，并显示开始、成功数量或失败原因的诊断状态。
+main.tsx: B-roll 工作台编排层；以两列等宽 panel 网格同时展示七个阶段，并按 Brief、资源创建或原位更新的项目能力完成事件刷新资源；首次挂载也主动读取一次，避免 iframe SDK 先连上时丢失首个刷新事件，并显示开始、成功数量或失败原因的诊断状态。
 use-media-asset-events.tsx: iframe 内 Recut Asset SSE 缓存边界；首次快照和增量事件维护唯一生命周期真相，资源卡、详情与引用缩略图不轮询素材状态。
 stage-panel.tsx: 工作台单层创作分区；以统一边框卡片承载标题、资源画布、空状态和创建入口，避免与页面标题重复绘制顶部分隔线。
 resource-card.tsx: 固定宽度的素材缩略图；Look 和 Keyframes 展示实际生成图，已完成 Scene 与 Delivery 成片直接展示静音循环视频画面，运行或失败素材显示状态兜底，悬停显示三点操作菜单。
