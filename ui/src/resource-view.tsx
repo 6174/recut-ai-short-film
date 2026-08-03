@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Resource 类型、共享 Asset SSE 缓存与 React 图文展示原语
- * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的真实视频预览、图片与音视频播放器详情；兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
+ * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的真实视频预览、图片与音视频播放器详情；Brief 同时呈现细节描述与预期时长，兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
  * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 与 Delivery 顶层视频并兼容旧多项 Scene
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -176,7 +176,7 @@ export function resourceImageURLs(resource: Resource) {
 export function resourcePreviewLines(resource: Resource) {
   const content = record(resource.content);
   const kind = resource.kind.toLowerCase();
-  const fields = kind === "brief" ? ["topic", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions"] : kind === "scenes" ? ["scene", "videoDirection"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
+  const fields = kind === "brief" ? ["topic", "details", "expectedDurationSec", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions"] : kind === "scenes" ? ["scene", "videoDirection"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
   const list = kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : undefined;
   const entries = Array.isArray(list) ? list.map((item) => {
     const value = record(item);
@@ -231,7 +231,7 @@ function StageView({ resource, compact }: { resource: Resource; compact: boolean
   if (isLook(resource)) return <LookView compact={compact} content={content} />;
   const kind = resource.kind.toLowerCase();
   const list = kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : kind === "delivery" ? content.checklist : undefined;
-  const fields = kind === "brief" ? ["topic", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
+  const fields = kind === "brief" ? ["topic", "details", "expectedDurationSec", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
   const first = fields.map((key) => text(content[key])).find(Boolean) || text(resource.content) || "尚未填写可展示内容";
   if (compact) return <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{first}</p>;
   const exportedVideo = kind === "delivery" ? text(content.assetId) : "";

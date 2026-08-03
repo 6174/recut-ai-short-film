@@ -11,7 +11,7 @@
    https://github.com/6174/recut-vox-broll
    ```
 
-3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**。
+3. 切到 **Project** tab，新建项目时选择 **Vox B-roll Explainer**，填写选题方向、细节描述和预期视频时长（30/60/90/120 秒或自定义），然后点击“交给 Codex 开始”。
 4. 新建 Codex 或 Claude Code 对话后，点击“从一个主题开始”“把想法变成论点”或“继续当前创作”引导卡；提示词会写入输入框，仍可编辑后发送。
 
 App 会按以下顺序引导创作，不会把未确认的想法误当成成片：
@@ -20,9 +20,9 @@ App 会按以下顺序引导创作，不会把未确认的想法误当成成片�
 Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 ```
 
-- **Brief**：收敛目标观众、核心观点与叙事张力。
-- **Beats**：将观点拆成能看完的节拍。
-- **Look / Keyframes**：确定并生成统一的纸质拼贴视觉。关键画面先读取当前平台图片生成方案：可使用 Media Platform 的 `recut.image.generate`，也可使用宿主配置的 Codex 原生图片生成；无论哪种方式，进入资源前都必须成为 Recut Media Asset。Codex 原生图会先写入当前 Recut 项目，再通过 `recut.media.import_image` 归档并取得真实 `assetId`，不能只作为对话预览进入 Look/Keyframe。
+- **Brief**：起始表单保存选题方向、细节描述、目标时长，并收敛目标观众、核心观点与叙事张力。
+- **Beats**：将观点严格拆成约 5 秒一个的可观看节拍；长视频增加节拍，不拉长单个关键画面。
+- **Look / Keyframes**：Look 图是包含全片主体、道具、信息卡、材料与层级的完整视觉母版，而不只是配色风格；Keyframe 再以它为基础逐个生成约 5 秒镜头。关键画面先读取当前平台图片生成方案：可使用 Media Platform 的 `recut.image.generate`，也可使用宿主配置的 Codex 原生图片生成；无论哪种方式，进入资源前都必须成为 Recut Media Asset。Codex 原生图会先写入当前 Recut 项目，再通过 `recut.media.import_image` 归档并取得真实 `assetId`，不能只作为对话预览进入 Look/Keyframe。
 - **Audio / Scenes**：先生成真实旁白，再逐段生成可预览的视频。
 - **Delivery**：在界面中排列已确认的视频和可选音频轨道，导出最终视频；视频原声会保留，额外音频与之混合。
 

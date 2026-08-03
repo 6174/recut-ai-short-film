@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖浏览器 EventSource 与 Recut `/v1/media/events` 的资产快照/增量事件契约
- * [OUTPUT]: 对外提供 MediaAssetEventsProvider、useMediaAssetEvents 与 AssetState；维护 iframe 内唯一的 Asset 生命周期缓存
- * [POS]: vox-broll UI 的媒体状态边界；资源卡、资源详情和引用缩略图共享一条 Recut SSE，不轮询单个素材或 Provider
+ * [OUTPUT]: 对外提供 MediaAssetEventsProvider、useMediaAssetEvents 与 AssetState；维护 iframe 内唯一的 Asset 生命周期缓存，并为生成中的素材补充本地状态校验
+ * [POS]: vox-broll UI 的媒体状态边界；资源卡、资源详情和引用缩略图共享一条 Recut SSE；SSE 重连滞后时仅校验仍在生成的素材，不查询 Provider
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -53,6 +53,10 @@ function parseEvent(event: Event) {
   }
 }
 
+function sameAsset(left: AssetState, right: AssetState) {
+  return left.status === right.status && left.updatedAt === right.updatedAt && left.error === right.error;
+}
+
 function AssetEventsConnection({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<AssetEvents>(EmptyAssetEvents);
   useEffect(() => {
@@ -68,6 +72,31 @@ function AssetEventsConnection({ children }: { children: ReactNode }) {
     });
     return () => stream.close();
   }, []);
+  useEffect(() => {
+    const pendingIDs = Object.values(events.assetByID)
+      .filter((asset) => asset.status === "queued" || asset.status === "running")
+      .map((asset) => asset.id);
+    if (!pendingIDs.length) return;
+    let active = true;
+    const reconcile = async () => {
+      const assets = await Promise.all(pendingIDs.map(async (id) => {
+        try {
+          const response = await fetch(`/v1/media/assets/${encodeURIComponent(id)}`);
+          return response.ok ? normalizeAsset(await response.json()) : null;
+        } catch {
+          return null;
+        }
+      }));
+      if (!active) return;
+      setEvents((current) => {
+        const updates = assets.filter((asset): asset is AssetState => Boolean(asset) && !sameAsset(current.assetByID[asset.id] ?? asset, asset));
+        return updates.length ? { ...current, assetByID: { ...current.assetByID, ...Object.fromEntries(updates.map((asset) => [asset.id, asset])) } } : current;
+      });
+    };
+    void reconcile();
+    const timer = window.setInterval(() => void reconcile(), 2000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [events.assetByID]);
   const value = useMemo(() => events, [events]);
   return <AssetEventsContext.Provider value={value}>{children}</AssetEventsContext.Provider>;
 }

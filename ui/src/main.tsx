@@ -1,12 +1,12 @@
 /**
  * [INPUT]: 依赖 React、recut UI SDK、共享 Asset SSE 缓存、资源卡片与资源弹窗
- * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图与创建、两轨最终导出、Brief/资源创建或原位更新后的项目事件驱动资源刷新及最小通信诊断；SDK 早于 React effect 连接时也会读取已有资源
+ * [OUTPUT]: 对外提供 B-roll 多面板工作台根视图、无 Brief 项目的起始表单、两轨最终导出、Brief/资源创建或原位更新后的项目事件驱动资源刷新及最小通信诊断；起始表单保存后把 5 秒节拍的 Beats 任务交给 Codex，刷新后按资源 ID 同步已打开详情
  * [POS]: vox-broll 的项目 UI 编排层；同时展示全部创作阶段，为所有资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API，不直接访问 HTTP、终端或 SQLite
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { createRoot } from "react-dom/client";
-import { useEffect, useState } from "react";
-import { CreateResourceDialog, ResourcePreviewDialog } from "./resource-dialogs";
+import { useEffect, useRef, useState } from "react";
+import { CreateResourceDialog, type ProjectBriefInput, ResourcePreviewDialog } from "./resource-dialogs";
 import { recut } from "./recut-sdk";
 import { StagePanel, type Stage } from "./stage-panel";
 import { DeliveryExportDialog } from "./timeline-export";
@@ -31,15 +31,22 @@ function App() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [preview, setPreview] = useState<Resource | null>(null);
   const [creatingStage, setCreatingStage] = useState<Stage | null>(null);
+  const [projectBriefOpen, setProjectBriefOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [diagnostic, setDiagnostic] = useState("等待资源连接");
+  const checkedInitialBrief = useRef(false);
   const refresh = async () => {
     setDiagnostic("正在请求资源列表");
     console.warn("[vox-broll] resource refresh started");
     try {
       const nextResources = await recut.state.query("resource.list");
       setResources(nextResources);
+      if (!checkedInitialBrief.current) {
+        checkedInitialBrief.current = true;
+        setProjectBriefOpen(!nextResources.some((resource) => resource.kind.toLowerCase() === "brief"));
+      }
+      setPreview((current) => current ? nextResources.find((resource) => resource.id === current.id) ?? null : null);
       setDiagnostic(`资源已同步：${nextResources.length} 项`);
       console.warn(`[vox-broll] resource refresh completed count=${nextResources.length}`);
     } catch (cause) {
@@ -65,6 +72,16 @@ function App() {
     const prepared = await recut.background.call("resource.prepare", { kind: stage.kind, dependencies: selectedResources.map((item) => `${item.kind}:${item.id}`), instruction });
     await recut.agent.send({ prompt: prepared.prompt });
     setStatus("创作请求已发给 Codex；资源完成后会自动出现。 ");
+  };
+  const startProjectBrief = async (input: ProjectBriefInput) => {
+    const brief = await recut.background.call("brief.create", input) as { id: string };
+    await refresh();
+    try {
+      await recut.agent.send({ prompt: `项目起始表单已保存为 Brief（${brief.id}）。请先调用 workflow.context 并只完成当前允许的 Beats 阶段：围绕选题、细节描述与预期时长输出可审阅的结构化节拍。每个 Beat 的 durationSec 以 5 秒为目标，所有 Beat 合计必须等于 Brief 的 expectedDurationSec；不要让一个关键画面或 Scene 覆盖多个 5 秒节拍。完成 Beats 后停下等待用户确认，绝不提前生成 Look、关键画面、音频或视频。` });
+      setStatus("项目 Brief 已保存，Codex 正在按 5 秒节拍规划内容。 ");
+    } catch {
+      setStatus("项目 Brief 已保存，但当前没有可用的 Codex 会话；创建会话后可从内容结构继续。 ");
+    }
   };
   const exportDelivery = async (input: Record<string, unknown>) => {
     const asset = await recut.background.call("delivery.export", input);
@@ -108,7 +125,7 @@ function App() {
     {status && <p className="mt-5 text-sm text-muted-foreground" role="status">{status}</p>}
   </div>
   <ResourcePreviewDialog onDelete={(resource) => void remove(resource)} onOpenChange={(open) => !open && setPreview(null)} resource={preview} />
-  <CreateResourceDialog examples={creatingStage?.kind === "Brief" ? examples : []} isLook={creatingStage?.kind === "Look"} onCreate={(instruction, dependencies) => creatingStage ? create(creatingStage, instruction, dependencies) : Promise.resolve()} onOpenChange={(open) => !open && setCreatingStage(null)} open={Boolean(creatingStage)} resources={resources} stage={creatingStage?.label || "资源"} />
+  <CreateResourceDialog examples={creatingStage?.kind === "Brief" ? examples : []} isBrief={creatingStage?.kind === "Brief" || projectBriefOpen} isLook={creatingStage?.kind === "Look"} onCreate={(instruction, dependencies) => creatingStage ? create(creatingStage, instruction, dependencies) : Promise.resolve()} onOpenChange={(open) => { if (!open) { setCreatingStage(null); setProjectBriefOpen(false); } }} onStartBrief={startProjectBrief} open={Boolean(creatingStage) || projectBriefOpen} resources={resources} stage={creatingStage?.label || "选题与方向"} />
   <DeliveryExportDialog onExport={exportDelivery} onOpenChange={setDeliveryOpen} onTroubleshoot={troubleshootExport} open={deliveryOpen} resources={resources} />
   </main>;
 }

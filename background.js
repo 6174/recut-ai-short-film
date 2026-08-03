@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖平台注入的 ctx.sqlite、ctx.artifacts 与受限 ctx.media.compose capability
- * [OUTPUT]: 注册 B-roll brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
+ * [OUTPUT]: 注册保存选题方向、细节描述与预期时长的 B-roll Brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
  * [POS]: vox-broll 的唯一业务后端；数据表、文件和产物模型由本 App 自己定义，最终导出委托平台 Asset 合成
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -35,14 +35,19 @@ function createBrief(input, ctx) {
   ensureSchema(ctx);
   const topic = String(input.topic || "").trim();
   if (!topic) throw new Error("topic is required");
+  const details = String(input.details ?? "").trim();
+  const expectedDurationSec = input.expectedDurationSec === undefined ? 60 : Number(input.expectedDurationSec);
+  if (!Number.isFinite(expectedDurationSec) || expectedDurationSec <= 0) throw new Error("expectedDurationSec must be a positive number");
 
   const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const brief = {
     id,
     topic,
+    details,
+    expectedDurationSec,
     title: `${topic}，为什么值得被看见`,
-    premise: `用一个清晰的因果链解释“${topic}”。`,
-    direction: "快速建立冲突，以资料拼贴和关键数字推进论点。",
+    premise: details || `用一个清晰的因果链解释“${topic}”。`,
+    direction: `快速建立冲突，以资料拼贴和关键数字推进论点；全片按约 5 秒一个关键画面与信息变化拆分，总时长 ${expectedDurationSec} 秒。`,
     createdAt: new Date().toISOString(),
   };
   ctx.sqlite.execute(
@@ -73,8 +78,8 @@ const mediaSnapshotContract = {
 
 const resourceContracts = {
   brief: {
-    inputs: ["topic"],
-    output: { topic: "string", premise: "string", direction: "string" },
+    inputs: ["topic", "details", "expectedDurationSec"],
+    output: { topic: "string", details: "string", expectedDurationSec: "number", premise: "string", direction: "string" },
   },
   beats: {
     inputs: ["approved brief"],
@@ -205,12 +210,12 @@ function prepareResource(input, ctx) {
   })();
   const batch = /全部|所有|一次生成|all/i.test(instruction);
   const stageWorkflow = {
-    brief: "一份短而明确的创作简报：主题、受众、论点、核心张力与编辑方向。",
-    beats: "一个可审阅的叙事弧：三秒钩子、逐段节拍、每段的观众理解与画面证据。",
-    look: "3 个明显不同的视觉方向。每个方向都需要一张 16:9 风格参考图和原始画面描述；图里不要有可读正文、Logo 或水印。完成后停下，等待选择。",
-    keyframes: "每个节拍一张关键画面：先读取 recut.project_context，按当前图片生成方案逐张生成。Media Platform route 使用 recut.image.generate；Codex 原生方案使用宿主提供的图片能力，随后将最终文件写入当前 Recut 项目目录并调用 recut.media.import_image。无论哪种路径，图片必须先成为稳定的 Recut Media Asset 并取得真实 assetId，再保存；绝不伪造 assetId 或只交付对话预览。每个 keyframes[] 项的 image 必须是完整 MediaSnapshot，image.assetId 指向该节拍的新图；text 是该图的原始提示词；imageAssetIds 引用选定 Look 的参考图；audioAssetIds 为空数组；sourceResourceIds 记录对应 Beat 和 Look。绝不把文字画面描述当成关键画面保存。",
+    brief: "一份短而明确的创作简报：选题方向、细节补充、目标受众、论点、核心张力、编辑方向与预期总时长。",
+    beats: "一个可审阅的叙事弧：三秒钩子、逐段节拍、每段的观众理解与画面证据。严格把全片拆成约 5 秒一段的节奏：每个 Beat 的 durationSec 目标为 5，长视频按 5 秒单元增加 Beat，不能让单个关键画面或 Scene 承担过长时段；所有 Beat 时长之和必须匹配 Brief 的 expectedDurationSec。",
+    look: "3 个明显不同的视觉方向。每个方向都需要一张 16:9 风格参考图和原始画面描述；参考图必须是一张完整的视觉母版，画面中明确包含整支视频会反复出现的所有关键视觉元素——主体/人物或产品、核心道具、信息卡、背景材料、装饰碎片、标题安全区与层级关系——而非只展示配色或纹理。图里不要有可读正文、Logo 或水印。完成后停下，等待选择。",
+    keyframes: "每个节拍一张关键画面；一个关键画面只服务约 5 秒的单一信息变化，绝不以一张关键画面覆盖 10 秒或更长的叙事。先读取 recut.project_context，按当前图片生成方案逐张生成。Media Platform route 使用 recut.image.generate；Codex 原生方案使用宿主提供的图片能力，随后将最终文件写入当前 Recut 项目目录并调用 recut.media.import_image。无论哪种路径，图片必须先成为稳定的 Recut Media Asset 并取得真实 assetId，再保存；绝不伪造 assetId 或只交付对话预览。每个 keyframes[] 项的 image 必须是完整 MediaSnapshot，image.assetId 指向该节拍的新图；text 是该图的原始提示词；imageAssetIds 引用选定 Look 的参考图；audioAssetIds 为空数组；sourceResourceIds 记录对应 Beat 和 Look。绝不把文字画面描述当成关键画面保存。",
     audio: "每个场景都必须先生成真实可播放的旁白：从 recut.project_context.media.defaultRoutes 找到 speech.generate 的 credentialId，调用 recut.media.list_voices 取得 voiceId；逐段调用 recut.speech.generate_async 后立即取得稳定 assetId 并保存 scenes[]。每项 audio 必须是完整 MediaSnapshot：assetId 为刚提交的音频，text 为旁白原文，imageAssetIds/audioAssetIds 为空数组，sourceResourceIds 记录对应 Beat 与 Keyframe。Daemon 会原位更新状态；只有音频已完成时才可将它作为场景视频输入。音乐和音效可以是编辑指令，但不能替代旁白音频。生成失败时不得保存空 Audio 资源，应如实报告。",
-    scenes: `视频生成昂贵，默认只生成第一段并停下等待用户确认。${batch ? "用户已明确要求一次生成全部剩余段；逐段生成，但每段必须独立调用 resource.create，绝不能合并为一个含多段的 Scene resource。" : "不要循环生成其余段，不要合并为一个含多段的 Scene resource。"} 执行顺序不可替换：先调用 recut.video.generate_async，传入该段 keyframe.assetId 与已完成 audio.assetId。调用的视频提示词必须把该场景 audio.text（若为空则 narration）原样逐字写在“唯一人声/逐字台词”段落中，并明确：使用附带参考音频作为唯一人声；禁止新增对白、歌词、耳语、翻译或不可辨识人声；只生成与画面动作相符的非语言效果声。若 Route 使用 Seedance，output.generateAudio 默认为 true，只有用户明确要求无声视频才传 false；Gemini 不传此字段。提交响应会带稳定 assetIds[0]，立刻调用 resource.create 保存独立 Scene resource，不能等待轮询完成。recut.media.get_job 只用于读取并报告该 Asset 的 queued/running/completed/failed 状态。禁止使用 HyperFrames、ffmpeg、浏览器自动化、终端脚本或本地渲染替代该 API 调用。顶层字段为 beatId、title、durationSec、visualAction、cutPoint、video；video 必须是完整 MediaSnapshot 且 assetId 指向刚提交的视频。`,
+    scenes: `视频生成昂贵，默认只生成第一段并停下等待用户确认。每个 Scene 只对应一个约 5 秒的 Beat 和关键画面；时长更长时继续拆分，不得靠一个 Scene 覆盖多个信息变化。${batch ? "用户已明确要求一次生成全部剩余段；逐段生成，但每段必须独立调用 resource.create，绝不能合并为一个含多段的 Scene resource。" : "不要循环生成其余段，不要合并为一个含多段的 Scene resource。"} 执行顺序不可替换：先调用 recut.video.generate_async，传入该段 keyframe.assetId 与已完成 audio.assetId。调用的视频提示词必须把该场景 audio.text（若为空则 narration）原样逐字写在“唯一人声/逐字台词”段落中，并明确：使用附带参考音频作为唯一人声；禁止新增对白、歌词、耳语、翻译或不可辨识人声；只生成与画面动作相符的非语言效果声。若 Route 使用 Seedance，output.generateAudio 默认为 true，只有用户明确要求无声视频才传 false；Gemini 不传此字段。提交响应会带稳定 assetIds[0]，立刻调用 resource.create 保存独立 Scene resource，不能等待轮询完成。recut.media.get_job 只用于读取并报告该 Asset 的 queued/running/completed/failed 状态。禁止使用 HyperFrames、ffmpeg、浏览器自动化、终端脚本或本地渲染替代该 API 调用。顶层字段为 beatId、title、durationSec、visualAction、cutPoint、video；video 必须是完整 MediaSnapshot 且 assetId 指向刚提交的视频。`,
     delivery: "最终时间线、画幅、时长、格式和可执行的导出前检查表。",
   }[kind.toLowerCase()] || "一份面向审阅的清晰创作产出。";
   const contract = resourceContracts[kind.toLowerCase()];
