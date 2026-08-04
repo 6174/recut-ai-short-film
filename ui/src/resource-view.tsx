@@ -1,12 +1,13 @@
 /**
  * [INPUT]: 依赖 Resource 类型、共享 Asset SSE 缓存与 React 图文展示原语
- * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的真实视频预览、图片与音视频播放器详情；Brief 同时呈现细节描述与预期时长，兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
- * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 与 Delivery 顶层视频并兼容旧多项 Scene
+ * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的 iframe 视频预览、图片与按需音视频播放器详情；Brief 同时呈现细节描述与预期时长，兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
+ * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、iframe 视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 与 Delivery 顶层视频并兼容旧多项 Scene
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useEffect, useState } from "react";
 import type { Resource } from "./main";
 import { type AssetState, useMediaAssetEvents } from "./use-media-asset-events";
+import { VideoFrame } from "./video-frame";
 
 type RecordValue = Record<string, unknown>;
 type MediaSnapshot = { assetId?: string; text?: string; imageAssetIds?: string[] };
@@ -21,7 +22,6 @@ const labels: Record<string, string> = {
 };
 
 const mediaURL = (assetId: string) => `/v1/media/assets/${encodeURIComponent(assetId)}/content`;
-const videoPreviewURL = (assetId: string) => `${mediaURL(assetId)}#t=0.001`;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
 const text = (value: unknown) => Array.isArray(value) ? value.map(text).filter(Boolean).join("、") : typeof value === "string" || typeof value === "number" ? String(value) : "";
 const title = (key: string) => labels[key] || key.replace(/([A-Z])/g, " $1").trim();
@@ -94,17 +94,14 @@ export function AssetImagePreview({ alt, assetId, className, compact = false }: 
 function AssetPlayer({ assetId, kind }: { assetId: string; kind: "video" | "audio" }) {
   const asset = useAssetState(assetId);
   if (!asset || asset.status !== "completed") return <PendingMedia asset={asset} />;
-  const player = kind === "video" ? <video aria-label="场景视频" className="aspect-video w-full rounded-md border bg-muted" controls playsInline preload="metadata" src={mediaURL(assetId)} /> : <audio className="w-full" controls src={mediaURL(assetId)} />;
+  const player = kind === "video" ? <VideoFrame alt="场景视频" className="w-full rounded-md border" controls src={mediaURL(assetId)} /> : <audio className="w-full" controls src={mediaURL(assetId)} />;
   return <div className="grid gap-1">{player}<GenerationDuration asset={asset} /></div>;
 }
 
 export function AssetVideoPreview({ assetId, title }: { assetId: string; title: string }) {
   const asset = useAssetState(assetId);
-  const [contentError, setContentError] = useState(false);
-  useEffect(() => setContentError(false), [assetId]);
   if (!asset || asset.status !== "completed") return <PendingMedia asset={asset} compact />;
-  if (contentError) return <PendingMedia asset={{ ...asset, status: "failed", error: "视频内容不可读取" }} compact />;
-  return <div className="relative size-full"><video aria-label={`${title} 视频预览`} autoPlay className="size-full object-cover" loop muted onError={() => setContentError(true)} playsInline preload="auto" src={videoPreviewURL(assetId)} /><GenerationDuration asset={asset} overlay /></div>;
+  return <div className="relative size-full"><VideoFrame alt={`${title} 视频预览`} className="size-full !aspect-auto" src={mediaURL(assetId)} /><GenerationDuration asset={asset} overlay /></div>;
 }
 
 export function isLegacyLook(resource: Resource) {
