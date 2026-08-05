@@ -66,8 +66,8 @@ function App() {
   const create = async (stage: Stage, instruction: string, dependencies: string[]) => {
     const selectedResources = resources.filter((resource) => dependencies.includes(resource.id));
     const prepared = await recut.background.call("resource.prepare", { kind: stage.kind, dependencies: selectedResources.map((item) => `${item.kind}:${item.id}`), instruction });
-    await recut.agent.send({ prompt: prepared.prompt });
-    setStatus("创作请求已发给 Codex；资源完成后会自动出现。 ");
+    await recut.agent.compose({ prompt: prepared.prompt });
+    setStatus("创作请求已填入右侧 Agent 输入框；发送后资源会自动出现。 ");
   };
   const startProjectBrief = async (input: ProjectBriefInput) => {
     const prompt = `我要制作一支 Vox 风格 B-roll 解说片。\n\n项目起始信息：\n- 选题方向：${input.topic}\n- 细节描述：${input.details || "无额外补充"}\n- 预期视频时长：${input.expectedDurationSec} 秒\n\n请严格从 Brief 阶段开始：\n1. 先调用 workflow.context。\n2. 仅调用 brief.create 保存以上选题方向、细节描述和 expectedDurationSec。\n3. 说明你将如何把这个选题收敛为核心观点、目标观众与开场冲突。\n4. 到此停下，等待我确认后再进入 Beats；不要提前生成内容结构、Look、关键画面、音频或视频。\n\n后续进入 Beats 时，整支片必须按约 5 秒一个 Beat、一个 Keyframe、一个 Scene 拆分；总时长 ${input.expectedDurationSec} 秒必须由这些 5 秒节拍覆盖。Look 参考图必须包含全片会出现的主体、道具、信息卡、背景材料与层级，而非只展示色彩风格。`;
@@ -84,8 +84,8 @@ function App() {
   };
   const troubleshootExport = async (message: string) => {
     try {
-      await recut.agent.send({ prompt: `请只排查并修复 B-roll 最终导出失败的问题，不要重新创作视频或改动时间线。导出由平台 FFmpeg 两轨合成执行，诊断如下：${message}\n如果未安装 FFmpeg，请按本机环境安装并在完成后提示我重试；若是编码或素材问题，定位原因并修复到可以重新导出。` });
-      setStatus("导出诊断已交给 Codex；它只会处理环境或导出错误，不会重做创作内容。");
+      await recut.agent.compose({ prompt: `请只排查并修复 B-roll 最终导出失败的问题，不要重新创作视频或改动时间线。导出由平台 FFmpeg 两轨合成执行，诊断如下：${message}\n如果未安装 FFmpeg，请按本机环境安装并在完成后提示我重试；若是编码或素材问题，定位原因并修复到可以重新导出。` });
+      setStatus("导出诊断已填入右侧 Agent 输入框；确认发送后它只会处理环境或导出错误，不会重做创作内容。");
     } catch { setStatus("导出失败，且当前没有可用的 Codex 会话；请创建会话后重试导出。 "); }
   };
   const retire = async (resource: Resource) => {
