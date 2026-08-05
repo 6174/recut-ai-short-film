@@ -1,3 +1,8 @@
+---
+name: vox-broll
+description: 把一个主题做成 Vox 风格 B-roll 解说片（Brief→Beats→Look→Keyframes→Audio→Scenes→Delivery）。
+---
+
 # Vox B-roll 创作指南
 
 > 这是创作契约，不是平台或工具说明。项目当前状态、可用能力和保存方式由宿主提供。
@@ -8,7 +13,7 @@
 
 ## 媒体执行边界
 
-所有图片、旁白和场景视频最终都必须成为 Recut Media Asset；任何媒体动作前先读取 `recut.project_context`，以当前平台配置为准。关键画面采用当前图片生成方案：若配置为 Media Platform route，调用 `recut.image.generate`；若配置为 Codex 原生图片生成，则使用宿主提供的 Codex 图片能力。Codex 原生图必须将最终文件写入当前 Recut 项目目录，再调用 `recut.media.import_image` 归档为当前项目的 Asset；只有返回的真实 `assetId` 能用于 Look 或 Keyframe。不得伪造 `assetId` 或只交付对话预览。不得假定 `recut.image.generate` 永远可用。场景视频仍按当前视频 route 调用 `recut.video.generate_async → resource.create`：提交会立刻返回稳定的 Recut `assetId`，该 Asset 先处于 `queued`；常驻 Daemon 将其提交给 Atlas 后，同一 ID 原位变为 `running`，最终为 `completed` 或 `failed`。`recut.media.get_job` 只用于读取和汇报状态，不能阻塞 Scene 引用的创建；旁白按当前语音 route 使用 `recut.speech.generate_async`。
+所有图片、旁白和场景视频最终都必须成为 Recut Media Asset；任何媒体动作前先读取 `recut.context` 与 `workflow.context`，以当前平台配置为准。关键画面采用当前图片生成方案：若配置为 Media Platform route，调用 `recut.image.generate`；若配置为 Codex 原生图片生成，则使用宿主提供的 Codex 图片能力。Codex 原生图必须将最终文件写入当前 Recut 项目目录，再调用 `recut.media.import_image` 归档为当前项目的 Asset；只有返回的真实 `assetId` 能用于 Look 或 Keyframe。不得伪造 `assetId` 或只交付对话预览。不得假定 `recut.image.generate` 永远可用。场景视频仍按当前视频 route 调用 `recut.video.generate_async → resource.create`：提交会立刻返回稳定的 Recut `assetId`，该 Asset 先处于 `queued`；常驻 Daemon 将其提交给 Atlas 后，同一 ID 原位变为 `running`，最终为 `completed` 或 `failed`。`recut.media.get_job` 只用于读取和汇报状态，不能阻塞 Scene 引用的创建；旁白按当前语音 route 使用 `recut.speech.generate_async`。
 
 这是 Provider 调用，不是本地视频创作任务。禁止以 HyperFrames、ffmpeg、浏览器自动化、终端脚本或本地渲染替代上述生成调用；即使通用视频 Skill 被自动建议，也不得选择或读取它。除非用户明确要求制作 HyperFrames 合成，否则不要读取、安装、调用或解释 HyperFrames；它不是 Scenes 阶段的实现方式。
 
@@ -73,7 +78,7 @@
 
 对每个已确认的节拍，按这个顺序完成：
 
-1. 基于选定 Look、该节拍与 `recut.project_context` 的当前图片方案生成一张 16:9 关键画面。Media Platform route 调用 `recut.image.generate`；Codex 原生方案使用宿主提供的图片能力，并将最终文件写入当前项目后调用 `recut.media.import_image`。只有图片已成为稳定的 Recut Media Asset 并取得真实 `assetId` 后才能继续；生成失败时如实报告，不能保存文字替代品或对话预览。
+1. 基于选定 Look、该节拍与 `recut.context` 的当前图片方案生成一张 16:9 关键画面。Media Platform route 调用 `recut.image.generate`；Codex 原生方案使用宿主提供的图片能力，并将最终文件写入当前项目后调用 `recut.media.import_image`。只有图片已成为稳定的 Recut Media Asset 并取得真实 `assetId` 后才能继续；生成失败时如实报告，不能保存文字替代品或对话预览。
 2. 取得生成成功的 `assetId` 后，保存一个 Keyframe：`image.assetId` 是新图，`image.text` 是本图原始提示词，`composition`、`headline`、`layers` 解释这张图如何服务叙事。
 3. 将 Look 图片放入 `image.imageAssetIds` 作为风格来源，将当前 Beat 和 Look 的资源 ID 放入 `image.sourceResourceIds`；`image.audioAssetIds` 为空数组。
 
@@ -85,7 +90,7 @@
 
 请求目标：把已确认的 Keyframes 组织成可以制作的声音时间轴，不把“背景音乐”写成空泛占位。每个场景要对应一个 Beat 和关键画面，交付旁白、时长、音乐节奏、必要音效、字幕文本和切点意图；旁白只说画面不能独立表达的新信息。完成标准：每一段时长能支撑对应旁白，音乐与音效不遮挡信息，Scenes 可据此决定视频长度和转场时机。未确认 Audio 不得生成 Scenes。
 
-真实旁白是 Audio 阶段的必需产物，不是可选装饰。先从 `recut.project_context` 的 `media.defaultRoutes` 找到语音 Route 的 `credentialId`，调用 `recut.media.list_voices` 选择一个可用 `voiceId`；对每段旁白调用 `recut.speech.generate_async` 后，必须立刻以返回的 `jobId` 调用 `recut.media.wait_for_job`（最长 300 秒）。只有返回 `completed` 后才能保存 Audio 引用或宣称生成成功；`failed` 必须如实报告 Provider 错误，等待结束仍为 `queued`/`running` 则报告为待完成，不能把它当成功。每个已完成的 `scenes[].audio` 必须是完整 MediaSnapshot，`assetId` 指向该段音频、`text` 为旁白原文、两个素材引用数组为空、`sourceResourceIds` 关联 Beat 与 Keyframe。仅已完成音频可作为场景视频供应商参考；绝不能保存“只有声音设计文字”的空 Audio 容器。
+真实旁白是 Audio 阶段的必需产物，不是可选装饰。先从 `recut.context` 的 `media.defaultRoutes` 找到语音 Route 的 `credentialId`，调用 `recut.media.list_voices` 选择一个可用 `voiceId`；对每段旁白调用 `recut.speech.generate_async` 后，必须立刻以返回的 `jobId` 调用 `recut.media.wait_for_job`（最长 300 秒）。只有返回 `completed` 后才能保存 Audio 引用或宣称生成成功；`failed` 必须如实报告 Provider 错误，等待结束仍为 `queued`/`running` 则报告为待完成，不能把它当成功。每个已完成的 `scenes[].audio` 必须是完整 MediaSnapshot，`assetId` 指向该段音频、`text` 为旁白原文、两个素材引用数组为空、`sourceResourceIds` 关联 Beat 与 Keyframe。仅已完成音频可作为场景视频供应商参考；绝不能保存“只有声音设计文字”的空 Audio 容器。
 
 **Scenes｜场景视频**
 

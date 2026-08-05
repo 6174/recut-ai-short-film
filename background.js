@@ -1,23 +1,29 @@
 /*
- * [INPUT]: 依赖平台注入的 ctx.sqlite、ctx.artifacts 与受限 ctx.media.compose capability
+ * [INPUT]: 依赖平台注入的 ctx.sqlite（appstate/<appId>/storage.sqlite，全局 + 所有 Project 共用一个库）、ctx.artifacts 与受限 ctx.media.compose capability
  * [OUTPUT]: 注册保存选题方向、细节描述与预期时长的 B-roll Brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
- * [POS]: vox-broll 的唯一业务后端；数据表、文件和产物模型由本 App 自己定义，最终导出委托平台 Asset 合成
+ * [POS]: vox-broll 的唯一业务后端；briefs/resources 以 project_id 分区（无项目时写入全局分区），数据表、文件和产物模型由本 App 自己定义，最终导出委托平台 Asset 合成
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 
+function scope(ctx) {
+  return ctx.project ? ctx.project.id : "";
+}
+
 function ensureSchema(ctx) {
   ctx.sqlite.execute(
-    "create table if not exists briefs (id text primary key, topic text not null, title text not null, body text not null, created_at text not null)",
+    "create table if not exists briefs (id text primary key, project_id text not null default '', topic text not null, title text not null, body text not null, created_at text not null)",
   );
-  ctx.sqlite.execute("create table if not exists resources (id text primary key, kind text not null, title text not null, content_json text not null, dependencies_json text not null, created_at text not null, retired_at text)");
+  ctx.sqlite.execute("create table if not exists resources (id text primary key, project_id text not null default '', kind text not null, title text not null, content_json text not null, dependencies_json text not null, created_at text not null, retired_at text)");
   ctx.sqlite.execute("create table if not exists app_meta (key text primary key, value text not null)");
+  try { ctx.sqlite.execute("alter table resources add column project_id text not null default ''"); } catch (_) { /* 新库已含该列。 */ }
   try { ctx.sqlite.execute("alter table resources add column retired_at text"); } catch (_) { /* 旧数据库已有该列，无需迁移。 */ }
+  try { ctx.sqlite.execute("alter table briefs add column project_id text not null default ''"); } catch (_) { /* 新库已含该列。 */ }
 }
 
 function purgeInvalidMediaResources(ctx) {
   const marker = ctx.sqlite.query("select value from app_meta where key = ?", ["invalid-media-resource-purge-v2"]);
   if (marker.length) return;
-  const rows = ctx.sqlite.query("select id, kind, content_json from resources where retired_at is null");
+  const rows = ctx.sqlite.query("select id, kind, content_json from resources where project_id = ? and retired_at is null", [scope(ctx)]);
   rows.forEach((row) => {
     const content = JSON.parse(row.content_json);
     const kind = String(row.kind).toLowerCase();
@@ -26,7 +32,7 @@ function purgeInvalidMediaResources(ctx) {
     const invalidLook = kind === "look" && (!media || !media.assetId || !media.text);
     const invalidAudio = kind === "audio" && (!scenes.length || scenes.some((scene) => !scene?.audio?.assetId));
     const invalid = invalidLook || invalidAudio;
-    if (invalid) ctx.sqlite.execute("delete from resources where id = ?", [row.id]);
+    if (invalid) ctx.sqlite.execute("delete from resources where id = ? and project_id = ?", [row.id, scope(ctx)]);
   });
   ctx.sqlite.execute("insert into app_meta (key, value) values (?, ?)", ["invalid-media-resource-purge-v2", new Date().toISOString()]);
 }
@@ -51,19 +57,19 @@ function createBrief(input, ctx) {
     createdAt: new Date().toISOString(),
   };
   ctx.sqlite.execute(
-    "insert into briefs (id, topic, title, body, created_at) values (?, ?, ?, ?, ?)",
-    [id, topic, brief.title, JSON.stringify(brief), brief.createdAt],
+    "insert into briefs (id, project_id, topic, title, body, created_at) values (?, ?, ?, ?, ?, ?)",
+    [id, scope(ctx), topic, brief.title, JSON.stringify(brief), brief.createdAt],
   );
   ctx.sqlite.execute(
-    "insert into resources (id, kind, title, content_json, dependencies_json, created_at, retired_at) values (?, ?, ?, ?, ?, ?, null)",
-    [brief.id, "brief", brief.title, JSON.stringify(brief), "[]", brief.createdAt],
+    "insert into resources (id, project_id, kind, title, content_json, dependencies_json, created_at, retired_at) values (?, ?, ?, ?, ?, ?, ?, null)",
+    [brief.id, scope(ctx), "brief", brief.title, JSON.stringify(brief), "[]", brief.createdAt],
   );
   return ctx.artifacts.publish({ type: "recut.vox.brief@1", value: brief });
 }
 
 function latestBrief(_, ctx) {
   ensureSchema(ctx);
-  const rows = ctx.sqlite.query("select body from briefs order by created_at desc limit 1");
+  const rows = ctx.sqlite.query("select body from briefs where project_id = ? order by created_at desc limit 1", [scope(ctx)]);
   return rows.length ? JSON.parse(rows[0].body) : null;
 }
 
@@ -239,12 +245,12 @@ function createResource(input, ctx) {
   validateResourceContent(kind, input.content);
   const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const resource = { id, kind, title: String(input.title), content: input.content, dependencies: Array.isArray(input.dependencies) ? input.dependencies : [], createdAt: new Date().toISOString() };
-  ctx.sqlite.execute("insert into resources (id, kind, title, content_json, dependencies_json, created_at, retired_at) values (?, ?, ?, ?, ?, ?, null)", [resource.id, resource.kind, resource.title, JSON.stringify(resource.content), JSON.stringify(resource.dependencies), resource.createdAt]);
+  ctx.sqlite.execute("insert into resources (id, project_id, kind, title, content_json, dependencies_json, created_at, retired_at) values (?, ?, ?, ?, ?, ?, ?, null)", [resource.id, scope(ctx), resource.kind, resource.title, JSON.stringify(resource.content), JSON.stringify(resource.dependencies), resource.createdAt]);
   return ctx.artifacts.publish({ type: `recut.vox.${resource.kind.toLowerCase()}@1`, value: resource });
 }
 
 function resourceByID(id, ctx) {
-  const rows = ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where id = ? and retired_at is null", [id]);
+  const rows = ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where id = ? and project_id = ? and retired_at is null", [id, scope(ctx)]);
   if (!rows.length) throw new Error(`resource ${id} was not found`);
   const row = rows[0];
   return { id: row.id, kind: row.kind, title: row.title, content: JSON.parse(row.content_json), dependencies: JSON.parse(row.dependencies_json), createdAt: row.created_at };
@@ -285,7 +291,7 @@ function updateResource(input, ctx) {
   }
   validateResourceContent(resource.kind, content);
   const title = String(input.title || "").trim() || resource.title;
-  ctx.sqlite.execute("update resources set title = ?, content_json = ? where id = ?", [title, JSON.stringify(content), id]);
+  ctx.sqlite.execute("update resources set title = ?, content_json = ? where id = ? and project_id = ?", [title, JSON.stringify(content), id, scope(ctx)]);
   const updated = { ...resource, title, content };
   return ctx.artifacts.publish({ type: `recut.vox.${resource.kind.toLowerCase()}@1`, value: updated });
 }
@@ -293,7 +299,7 @@ function updateResource(input, ctx) {
 function listResources(_, ctx) {
   ensureSchema(ctx);
   purgeInvalidMediaResources(ctx);
-  const resources = ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where retired_at is null order by created_at desc").map((row) => ({ id: row.id, kind: row.kind, title: row.title, content: JSON.parse(row.content_json), dependencies: JSON.parse(row.dependencies_json), createdAt: row.created_at }));
+  const resources = ctx.sqlite.query("select id, kind, title, content_json, dependencies_json, created_at from resources where project_id = ? and retired_at is null order by created_at desc", [scope(ctx)]).map((row) => ({ id: row.id, kind: row.kind, title: row.title, content: JSON.parse(row.content_json), dependencies: JSON.parse(row.dependencies_json), createdAt: row.created_at }));
   const storedBrief = latestBrief({}, ctx);
   if (storedBrief && !resources.some((resource) => resource.id === storedBrief.id)) resources.push({ id: storedBrief.id, kind: "brief", title: storedBrief.title, content: storedBrief, dependencies: [], createdAt: storedBrief.createdAt });
   return resources.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
@@ -303,7 +309,7 @@ function retireResource(input, ctx) {
   ensureSchema(ctx);
   const id = String(input.id || "").trim();
   if (!id) throw new Error("resource id is required");
-  ctx.sqlite.execute("update resources set retired_at = ? where id = ?", [new Date().toISOString(), id]);
+  ctx.sqlite.execute("update resources set retired_at = ? where id = ? and project_id = ?", [new Date().toISOString(), id, scope(ctx)]);
   return { id, retired: true };
 }
 
@@ -311,9 +317,9 @@ function deleteResource(input, ctx) {
   ensureSchema(ctx);
   const id = String(input.id || "").trim();
   if (!id) throw new Error("resource id is required");
-  const dependents = ctx.sqlite.query("select title, dependencies_json from resources where retired_at is null and id != ?", [id]).filter((row) => JSON.parse(row.dependencies_json).includes(id));
+  const dependents = ctx.sqlite.query("select title, dependencies_json from resources where project_id = ? and retired_at is null and id != ?", [scope(ctx), id]).filter((row) => JSON.parse(row.dependencies_json).includes(id));
   if (dependents.length) throw new Error(`无法删除：仍被“${dependents[0].title}”引用。请先处理下游资源。`);
-  ctx.sqlite.execute("delete from resources where id = ?", [id]);
+  ctx.sqlite.execute("delete from resources where id = ? and project_id = ?", [id, scope(ctx)]);
   return { id, deleted: true };
 }
 
