@@ -24,7 +24,7 @@ Brief → Beats → Look → Keyframes → Audio → Scenes → Delivery
 - **Beats**：将观点严格拆成约 5 秒一个的可观看节拍；长视频增加节拍，不拉长单个关键画面。
 - **Look / Keyframes**：Look 图是包含全片主体、道具、信息卡、材料与层级的完整视觉母版，而不只是配色风格；Keyframe 再以它为基础逐个生成约 5 秒镜头。关键画面先读取当前平台图片生成方案：可使用 Media Platform 的 `recut.image.generate`，也可使用宿主配置的 Codex 原生图片生成；无论哪种方式，进入资源前都必须成为 Recut Media Asset。Codex 原生图会先写入当前 Recut 项目，再通过 `recut.media.import_image` 归档并取得真实 `assetId`，不能只作为对话预览进入 Look/Keyframe。
 - **Audio / Scenes**：先生成真实旁白，再逐段生成可预览的视频。
-- **Delivery**：在界面中排列已确认的视频和可选音频轨道，导出最终视频；视频原声会保留，额外音频与之混合。
+- **Delivery**：在界面中排列已确认的视频和可选音频轨道，导出最终视频；视频原声会保留，额外音频与之混合。导出成功后，该最终视频自动成为 Project 封面。
 
 视频生成昂贵：默认只生成当前下一段 Scene。确认它符合预期后，再继续下一段；要批量生成时，请明确告诉 Agent。
 

@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖平台注入的 ctx.sqlite（appstate/<appId>/storage.sqlite，全局 + 所有 Project 共用一个库）、ctx.artifacts 与受限 ctx.media.compose capability
- * [OUTPUT]: 注册保存选题方向、细节描述与预期时长的 B-roll Brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出与受依赖保护删除的 App API 与 MCP 工具处理器
+ * [OUTPUT]: 注册保存选题方向、细节描述与预期时长的 B-roll Brief（同时具象为工作台 Resource）、资源创建、查询、归档、两轨确定性导出（完成时设为项目视频封面）与受依赖保护删除的 App API 与 MCP 工具处理器
  * [POS]: vox-broll 的唯一业务后端；briefs/resources 以 project_id 分区（无项目时写入全局分区），数据表、文件和产物模型由本 App 自己定义，最终导出委托平台 Asset 合成
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
@@ -334,6 +334,7 @@ function exportDelivery(input, ctx) {
   const audioTimeline = Array.isArray(input.audioTimeline) ? input.audioTimeline : [];
   const settings = input.settings && typeof input.settings === "object" && !Array.isArray(input.settings) ? input.settings : {};
   const asset = ctx.media.compose({ videoTimeline, audioTimeline, settings });
+  ctx.project.setCover({ assetId: asset.id });
   const duration = timelineDuration(videoTimeline);
   const aspectRatio = `${settings.width || 1920}:${settings.height || 1080}`;
   const content = {
