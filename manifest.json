@@ -1,32 +1,32 @@
 {
   "manifestVersion": 1,
   "id": "recut.vox-broll",
-  "name": "Vox B-roll Explainer",
+  "name": "AI 短片",
   "author": "6174",
-  "description": "将一个主题制作成可审阅、可继续制作的 Vox 风格 B-roll 解说片。",
+  "description": "把资料研究、导演风格与镜头生产收束成可审阅、可复用的 AI 短片。",
   "repository": "https://github.com/6174/recut-vox-broll",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "type": "project",
   "background": "background.js",
   "ui": { "projectView": "ui/dist/index.html" },
   "onboarding": [
     {
-      "id": "start-explainer",
-      "title": "从一个主题开始",
-      "description": "把主题收敛为可制作的 Vox 风格解说 Brief。",
-      "prompt": "我想制作一支 Vox 风格 B-roll 解说片，主题是【请在这里填写主题】。请先只帮我完成 Brief：询问必要信息，明确目标观众、核心观点、开场冲突和预期时长；不要提前生成视觉或视频。"
+      "id": "start-short-film",
+      "title": "从一个短片选题开始",
+      "description": "先冻结选题、风格模板、画幅和时长，再建立研究资料库。",
+      "prompt": "我想制作一支 AI 短片，选题是【请在这里填写主题】。请先调用 workflow.context，然后只完成“立项”（brief.create）：询问并保存风格模板、画幅、预期时长和必要约束。完成后停下，等待我确认再进入资料研究；不要提前提出创作方案、写剧本或生成任何媒体。"
     },
     {
-      "id": "shape-an-idea",
-      "title": "把想法变成论点",
-      "description": "从模糊问题出发，找到值得讲清楚的核心观点。",
-      "prompt": "我有一个还不成熟的视频想法：【请在这里填写想法】。请像 Vox 编辑一样和我一起收敛它：先问关键问题，找出可验证的核心观点、观众为什么在意，以及最有力的三秒开场。确认前不要进入 Beats、Look 或媒体生成。"
+      "id": "research-first",
+      "title": "先建立研究资料库",
+      "description": "文章、YouTube、小红书、抖音和网页先变成可复用资料资产。",
+      "prompt": "请先调用 workflow.context。若当前阶段允许资料研究，请围绕选题检索足够多且不同类型的资料；每条资料先调用 recut.media.create_reference 登记为全局 reference 素材，再保存资料研究资源中的 assetId 和研究结论。至少包含支持证据与限制/反例，保存后停下让我判断资料是否足够；绝不提前提出创作方案或生成媒体。"
     },
     {
       "id": "continue-workflow",
       "title": "继续当前创作",
       "description": "先读取项目状态，再只推进唯一允许的下一步。",
-      "prompt": "请先调用 workflow.context，告诉我这个 Vox B-roll 项目现在处于哪个阶段、已经确认了什么，以及唯一应该完成的下一步。然后只引导我完成那一步，不要跳过确认或重做已有资源。"
+      "prompt": "请先调用 workflow.context，告诉我这个 AI 短片项目现在处于哪个阶段、已经确认了什么，以及唯一允许的下一步。资料研究必须由用户确认，创作方案必须由用户选定；不要跳过闸门或重做已有决定。"
     }
   ],
   "permissions": ["sqlite", "artifacts.publish", "media.compose"],
@@ -34,32 +34,32 @@
     {
       "name": "brief.create",
       "surfaces": ["api", "mcp"],
-      "description": "根据项目表单创建并保存 Brief，保留选题方向、细节描述与预期视频时长。仅在尚未有 Brief，或用户明确要求重做时调用。",
-      "inputSchema": { "type": "object", "required": ["topic"], "properties": { "topic": { "type": "string", "minLength": 1, "description": "视频的选题方向或要解释的问题。" }, "details": { "type": "string", "description": "用户补充的背景、受众、观点、语气或约束。" }, "expectedDurationSec": { "type": "number", "description": "预期总时长（秒）。默认 60；后续 Beats 按约 5 秒一段拆分。" } } }
+      "description": "创建 AI 短片立项；冻结选题、细节、风格模板、画幅和时长。已有立项时必须获得用户明确同意，并传入 recreate: true 才能从头重做。",
+      "inputSchema": { "type": "object", "required": ["topic"], "properties": { "topic": { "type": "string", "minLength": 1, "description": "短片选题或要回答的问题。" }, "details": { "type": "string", "description": "受众、约束、已有素材或意图。" }, "styleTemplateId": { "type": "string", "enum": ["editorial-vox", "hand-drawn-essay", "animated-character"], "description": "冻结到本片的导演风格模板。" }, "aspectRatio": { "type": "string", "enum": ["16:9", "9:16", "1:1", "4:5"], "description": "成片画幅。" }, "expectedDurationSec": { "type": "number", "description": "预期总时长（秒）。默认 60；剧本按约 5 秒的场景单元拆分。" }, "recreate": { "type": "boolean", "description": "仅在用户明确确认从头重做时传 true；旧资源会保留历史但移出当前创作路径。" } } }
     },
     {
       "name": "brief.latest",
       "surfaces": ["api"],
-      "description": "读取项目最新的 Brief，供界面展示；Agent 应使用 workflow.context 获得完整当前状态。",
+      "description": "读取项目最新的立项，供界面展示；Agent 应使用 workflow.context 获得完整当前状态。",
       "inputSchema": { "type": "object", "properties": {} }
     },
     {
       "name": "workflow.context",
       "surfaces": ["api", "mcp"],
-      "description": "任何 B-roll 创作动作之前先调用。返回当前阶段、唯一允许的下一步、已确认资源，以及每种资源的 inputs/output/数组项字段契约；返回值覆盖聊天记忆。",
+      "description": "任何 AI 短片动作之前先调用。返回当前阶段、唯一允许的下一步、风格模板、资料确认/方案选定人工闸门、已确认资源以及阶段契约；返回值覆盖聊天记忆。",
       "inputSchema": { "type": "object", "properties": {} }
     },
     {
       "name": "resource.prepare",
       "surfaces": ["api"],
-      "description": "把 UI 选择的创作意图与资源引用整理为一份交给 Agent 的阶段任务书；不会创建资源。",
-      "inputSchema": { "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string" }, "instruction": { "type": "string" }, "dependencies": { "type": "array", "items": { "type": "string" } } } }
+      "description": "把 UI 的创作意图整理为交给 Agent 的当前阶段任务书；Agent 从 workflow.context 获取上下文并自行推理，不接收或保存 section 依赖；资料研究强制先创建全局 reference 素材；不会创建资源。",
+      "inputSchema": { "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string" }, "instruction": { "type": "string" }, "contextMentions": { "type": "array", "description": "仅当前任务可用的 @ 上下文；{type:'project_item'|'system_asset',id,name?,kind?}[]，不会写入资源或构成 section 依赖。", "items": { "type": "object" } } } }
     },
     {
       "name": "resource.create",
       "surfaces": ["mcp"],
-      "description": "完成当前阶段后保存结构化资源。先调用 workflow.context，只提交 allowedActions 对应的 kind；content 必须严格符合 resourceContracts[kind]，校验失败不会保存。Audio 阶段每个 scene.audio 必须引用成功提交后返回的 speech assetId，文字规划不能替代真实声音；Scenes 阶段可立即引用 video.generate_async 成功提交后返回的 queued video assetId，常驻 Daemon 会在同一 ID 上更新状态。提交有旁白参考的 Seedance 视频前，视频提示词必须逐字写入 audio.text/narration，并声明参考音频是唯一人声、禁止新增语言。成功返回带 id、kind、content、dependencies 的 Artifact。媒体输入快照只使用 prompt、imageAssetIds、audioAssetIds；资源 id 仅放 sourceResourceIds 追溯创作决定。",
-      "inputSchema": { "type": "object", "required": ["kind", "title", "content"], "properties": { "kind": { "type": "string", "enum": ["beats", "look", "keyframes", "audio", "scenes", "delivery"], "description": "必须等于 workflow.context.allowedActions 指向的当前阶段；Brief 使用 brief.create。" }, "title": { "type": "string", "minLength": 1, "description": "供用户在创作台识别的短标题。" }, "content": { "type": "object", "description": "阶段资源正文。字段、类型与数组项格式取自 workflow.context.resourceContracts[kind]；不能以自然语言替代结构化字段。" }, "dependencies": { "type": "array", "items": { "type": "string" }, "description": "本资源消费的前序资源 id。" } } }
+      "description": "完成当前允许的阶段后保存结构化资源。资料研究只能引用全局 reference 素材的 assetId，且必须保持 draft；资料确认和方案选定另有专用 operation。成片交付只能由 delivery.export 的真实平台合成结果写入。",
+      "inputSchema": { "type": "object", "required": ["kind", "title", "content"], "properties": { "kind": { "type": "string", "enum": ["research", "proposals", "script", "look", "keyframes", "audio", "scenes"], "description": "必须等于 workflow.context.allowedActions 指向的当前阶段；立项使用 brief.create，成片交付使用 delivery.export。" }, "title": { "type": "string", "minLength": 1 }, "content": { "type": "object", "description": "字段、类型和数组项格式必须取自 workflow.context.resourceContracts[kind]；不得写入其他 section 的资源 ID。" } } }
     },
     {
       "name": "resource.read",
@@ -70,32 +70,38 @@
     {
       "name": "resource.update",
       "surfaces": ["mcp"],
-      "description": "原位更新已有资源，保留 resource id、依赖与未修改部分。局部问题先 resource.read，只生成目标媒体，然后用 itemPatch 精确合并；不得为了修一段音频、关键画面或场景而重新创建整份资源。更新后会重新校验完整阶段契约。",
+      "description": "原位更新已有资源，保留 resource id 与未修改部分。局部问题先 resource.read，只生成目标媒体，然后用 itemPatch 精确合并；不得为了修一段音频、关键画面或场景而重新创建整份资源。更新后会重新校验完整阶段契约。",
       "inputSchema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "description": "要原位更新的资源 id。" }, "title": { "type": "string", "description": "可选的新标题。" }, "contentPatch": { "type": "object", "description": "顶层字段的浅合并；仅适用于不含数组的局部元数据。" }, "itemPatch": { "type": "object", "description": "数组中一个项目的精确更新：{ collection: 'beats|keyframes|scenes', match: { id?, beatId? }, patch: {...} }。Audio 替换一段声音时仅 patch 该 scenes 项的 audio。" } } }
     },
     {
       "name": "resource.list",
       "surfaces": ["api"],
-      "description": "读取当前项目所有有效 B-roll 资源，供创作台渲染。",
+      "description": "读取当前项目所有有效 AI 短片资源，供创作台渲染。",
       "inputSchema": { "type": "object", "properties": {} }
     },
     {
-      "name": "resource.retire",
+      "name": "research.approve",
       "surfaces": ["api", "mcp"],
-      "description": "将错误或废弃资源移出当前方案但保留历史；用于重做候选。返回 retired: true，且不会删除媒体。",
-      "inputSchema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "description": "资源 id。" } } }
+      "description": "用户确认资料研究的资料足够后调用。至少需三条不同来源；确认后才能进入创作方案。",
+      "inputSchema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "description": "要确认的资料研究资源 id。" } } }
     },
     {
-      "name": "resource.delete",
+      "name": "proposal.select",
       "surfaces": ["api", "mcp"],
-      "description": "永久删除未被下游资源引用的资源；存在引用时直接报错。通常优先使用 resource.retire。",
-      "inputSchema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "description": "要删除的资源 id。" } } }
+      "description": "用户从创作方案资源中选定一个候选；选定后才能进入剧本与场景方案。",
+      "inputSchema": { "type": "object", "required": ["id", "candidateId"], "properties": { "id": { "type": "string" }, "candidateId": { "type": "string" } } }
+    },
+    {
+      "name": "film.package",
+      "surfaces": ["api", "mcp"],
+      "description": "发布可供 Remotion 视频或其他应用消费的不可变 AI 短片交接包；只引用稳定资源和全局素材 ID，不读取其他应用私有状态。",
+      "inputSchema": { "type": "object", "properties": {} }
     },
     {
       "name": "delivery.export",
       "surfaces": ["api"],
-      "description": "不使用 AI 的确定性最终导出：接收固定视频轨、固定音频轨和基础编码设置，调用平台 media.compose 生成新的 video Asset，并保存导出记录。轨道片段必须按 startSec 连续排列。",
-      "inputSchema": { "type": "object", "required": ["videoTimeline", "audioTimeline", "settings"], "properties": { "videoTimeline": { "type": "array", "description": "顺序视频轨片段：{assetId,startSec,durationSec}[]" }, "audioTimeline": { "type": "array", "description": "顺序音频轨片段：{assetId,startSec,durationSec}[]" }, "settings": { "type": "object", "description": "{width,height,fps,quality}；quality 为 high、balanced 或 small。" }, "dependencies": { "type": "array", "items": { "type": "string" }, "description": "本次导出引用的 B-roll 资源 id。" } } }
+      "description": "不使用 AI 的确定性成片交付：接收固定视频轨、固定音频轨和基础编码设置，调用平台 media.compose 生成新的视频素材，并保存交付记录。轨道片段必须按 startSec 连续排列。",
+      "inputSchema": { "type": "object", "required": ["videoTimeline", "audioTimeline", "settings"], "properties": { "videoTimeline": { "type": "array", "description": "顺序视频轨片段：{assetId,startSec,durationSec}[]" }, "audioTimeline": { "type": "array", "description": "顺序音频轨片段：{assetId,startSec,durationSec}[]" }, "settings": { "type": "object", "description": "{width,height,fps,quality}；quality 为 high、balanced 或 small。" } } }
     }
   ]
 }

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Resource 类型、共享 Asset SSE 缓存与 React 图文展示原语
- * [OUTPUT]: 对外提供按 B-roll 创作阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的 iframe 视频预览、图片与按需音视频播放器详情；Brief 同时呈现细节描述与预期时长，兼容顶层和历史嵌套视频引用，并将 Delivery 的最终 assetId 作为视频处理
- * [POS]: vox-broll 的资源展示语义层；将内部 content JSON 翻译为图、文、iframe 视频画面和清单，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata，优先单段 Scene 与 Delivery 顶层视频并兼容旧多项 Scene
+ * [OUTPUT]: 对外提供按 AI 短片阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的 iframe 视频预览、图片与按需音视频播放器详情；立项同时呈现风格/画幅/时长，资料研究/创作方案/剧本与场景方案显示其审核与场景清单，兼容顶层和历史嵌套视频引用
+ * [POS]: vox-broll 的资源展示语义层；将导演配置、研究资料、方案、剧本与生成媒体翻译为图文，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ type LookContent = { media?: MediaSnapshot; definition?: string };
 const labels: Record<string, string> = {
   topic: "主题", premise: "核心观点", direction: "创作方向", summary: "摘要", definition: "风格定义", prompt: "生成提示词",
   palette: "色彩", paperTechnique: "纸张技法", typeTreatment: "字体处理", texture: "纹理", mood: "情绪",
+  styleTemplate: "导演风格", expectedDurationSec: "预期时长", researchQuestion: "研究问题", coverageSummary: "资料覆盖", status: "审核状态", sources: "资料来源", framing: "方案框架", selectionStatus: "选择状态", candidates: "候选方案", logline: "一句话梗概", thesis: "核心论点", narrativeArc: "叙事弧", whyNow: "为什么现在", screenplay: "剧本", visualPlan: "视觉计划", sourceIds: "资料引用", directorMethod: "导演方法",
   hook: "开场钩子", narrative: "叙事", composition: "画面构图", headline: "画面标题", layers: "画面层次",
   scene: "场景", videoDirection: "视频方向", narration: "旁白", music: "音乐", captions: "字幕", mix: "混音",
   aspectRatio: "画幅", duration: "时长", format: "格式", export: "导出", checklist: "检查清单",
@@ -173,8 +174,8 @@ export function resourceImageURLs(resource: Resource) {
 export function resourcePreviewLines(resource: Resource) {
   const content = record(resource.content);
   const kind = resource.kind.toLowerCase();
-  const fields = kind === "brief" ? ["topic", "details", "expectedDurationSec", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions"] : kind === "scenes" ? ["scene", "videoDirection"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
-  const list = kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : undefined;
+  const fields = kind === "brief" ? ["topic", "details", "styleTemplate", "aspectRatio", "expectedDurationSec", "premise", "direction"] : kind === "research" ? ["researchQuestion", "coverageSummary", "status"] : kind === "proposals" ? ["framing", "selectionStatus"] : kind === "script" ? ["title", "logline", "screenplay"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions"] : kind === "scenes" ? ["scene", "videoDirection"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
+  const list = kind === "research" ? content.sources : kind === "proposals" ? content.candidates : kind === "script" ? content.scenes : kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : undefined;
   const entries = Array.isArray(list) ? list.map((item) => {
     const value = record(item);
     return [itemHeading(value, item), ...itemDetails(value)];
@@ -227,12 +228,12 @@ function StageView({ resource, compact }: { resource: Resource; compact: boolean
   const content = record(resource.content);
   if (isLook(resource)) return <LookView compact={compact} content={content} />;
   const kind = resource.kind.toLowerCase();
-  const list = kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : kind === "delivery" ? content.checklist : undefined;
-  const fields = kind === "brief" ? ["topic", "details", "expectedDurationSec", "premise", "direction"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
+  const list = kind === "research" ? content.sources : kind === "proposals" ? content.candidates : kind === "script" ? content.scenes : kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : kind === "delivery" ? content.checklist : undefined;
+  const fields = kind === "brief" ? ["topic", "details", "styleTemplate", "aspectRatio", "expectedDurationSec", "premise", "direction"] : kind === "research" ? ["researchQuestion", "coverageSummary", "status"] : kind === "proposals" ? ["framing", "selectionStatus"] : kind === "script" ? ["title", "logline", "screenplay"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
   const first = fields.map((key) => text(content[key])).find(Boolean) || text(resource.content) || "尚未填写可展示内容";
   if (compact) return <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{first}</p>;
   const exportedVideo = kind === "delivery" ? text(content.assetId) : "";
-  return <div className="grid gap-4">{exportedVideo ? <AssetPlayer assetId={exportedVideo} kind="video" /> : <><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /></>}<dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} />)}</dl><ItemList items={list} titleKey={kind === "keyframes" ? "关键画面" : kind === "audio" ? "声音时间线" : kind === "scenes" ? "场景视频" : kind === "delivery" ? "检查清单" : "叙事节拍"} /></div>;
+  return <div className="grid gap-4">{exportedVideo ? <AssetPlayer assetId={exportedVideo} kind="video" /> : <><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /></>}<dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} />)}</dl><ItemList items={list} titleKey={kind === "research" ? "资料来源" : kind === "proposals" ? "候选方案" : kind === "script" ? "场景方案" : kind === "keyframes" ? "关键画面" : kind === "audio" ? "声音时间线" : kind === "scenes" ? "场景视频" : kind === "delivery" ? "检查清单" : "叙事节拍"} /></div>;
 }
 
 export function resourceSummary(resource: Resource) {
@@ -246,5 +247,5 @@ export function ResourcePresentation({ compact = false, resource }: { compact?: 
 }
 
 export function resourceKindLabel(kind: string) {
-  return ({ Brief: "创作方向", Beats: "内容结构", Look: "视觉参考", Keyframes: "分镜画面", Audio: "配音与音乐", Scenes: "场景视频", Delivery: "导出设置" } as Record<string, string>)[kind] || kind;
+  return ({ Brief: "立项", Research: "资料研究", Proposals: "创作方案", Script: "剧本与场景方案", Beats: "旧内容结构", Look: "视觉设定", Keyframes: "关键画面", Audio: "声音设计", Scenes: "场景视频", Delivery: "成片交付" } as Record<string, string>)[kind] || kind;
 }

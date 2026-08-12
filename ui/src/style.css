@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Tailwind CSS v4 编译器与 App 的 React 挂载入口
- * [OUTPUT]: 对外提供 Vox B-roll 资源管理器的设计令牌与基础样式
+ * [OUTPUT]: 对外提供 AI 短片创作台的设计令牌与基础样式
  * [POS]: ui/src 的视觉基础层；所有页面和 shadcn 风格组件共享此主题
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */

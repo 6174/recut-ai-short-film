@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖 B-roll Scene/Audio 资源、共享 Asset 预览与平台 delivery.export API
+ * [INPUT]: 依赖 AI 短片场景视频/声音设计资源、共享 Asset 预览与平台 delivery.export API
  * [OUTPUT]: 对外提供不依赖安全上下文 UUID 的固定视频轨、固定音频轨、顺序预览和基础编码设置的确定性导出工作台
- * [POS]: vox-broll Delivery 阶段的专用编辑器；只装配已有 Asset，不把导出意图交给 Agent 创作
+ * [POS]: vox-broll 成片交付阶段的专用编辑器；只装配已有素材，不把导出意图交给 Agent 创作
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { ChevronDown, ChevronUp, Download, LoaderCircle, Music2, Plus, Trash2, Video } from "lucide-react";
@@ -88,7 +88,7 @@ function TimelinePreview({ audio, video }: { audio: TrackClip[]; video: TrackCli
   return <div className="grid gap-2"><div className="aspect-video overflow-hidden rounded-lg border bg-black"><video autoPlay className="size-full object-contain" controls key={videoClip.id} onEnded={nextVideo} onPlay={() => void audioElement.current?.play()} playsInline src={mediaURL(videoClip.assetId)} /></div>{audioClip ? <audio controls key={audioClip.id} onEnded={() => setAudioIndex((index) => index < audio.length - 1 ? index + 1 : index)} ref={audioElement} src={mediaURL(audioClip.assetId)} /> : <p className="text-xs text-muted-foreground">未额外选择音频轨；预览和导出都会保留视频原声。</p>}<p className="text-[11px] text-muted-foreground">预览按轨道顺序播放；导出保留视频原声，并与已选音频轨混合为单一视频。</p></div>;
 }
 
-export function TimelineExport({ onExport, onTroubleshoot, resources }: { onExport: (input: { videoTimeline: ReturnType<typeof sequential>; audioTimeline: ReturnType<typeof sequential>; settings: ExportSettings; dependencies: string[] }) => Promise<ExportResult>; onTroubleshoot: (message: string) => Promise<void>; resources: Resource[] }) {
+export function TimelineExport({ onExport, onTroubleshoot, resources }: { onExport: (input: { videoTimeline: ReturnType<typeof sequential>; audioTimeline: ReturnType<typeof sequential>; settings: ExportSettings }) => Promise<ExportResult>; onTroubleshoot: (message: string) => Promise<void>; resources: Resource[] }) {
   const sources = useMemo(() => ({ video: videoSources(resources), audio: audioSources(resources) }), [resources]);
   const [videoTrack, setVideoTrack] = useState<TrackClip[]>([]);
   const [audioTrack, setAudioTrack] = useState<TrackClip[]>([]);
@@ -101,7 +101,7 @@ export function TimelineExport({ onExport, onTroubleshoot, resources }: { onExpo
   const exportTimeline = async () => {
     setSubmitting(true); setError("");
     try {
-      const result = await onExport({ videoTimeline: sequential(videoTrack), audioTimeline: sequential(audioTrack), settings, dependencies: [...new Set([...videoTrack, ...audioTrack].map((clip) => clip.resourceId))] });
+      const result = await onExport({ videoTimeline: sequential(videoTrack), audioTimeline: sequential(audioTrack), settings });
       setAssetId(result.id || "");
     } catch (cause) { const message = cause instanceof Error ? cause.message : "导出失败"; setError(message); void onTroubleshoot(message); }
     finally { setSubmitting(false); }

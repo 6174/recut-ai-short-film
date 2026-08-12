@@ -4,8 +4,8 @@
 
 成员清单
 package.json: Vite、React、Tailwind、Radix Dialog / Dropdown Menu 与 shadcn 风格组件的独立构建配置。
-vite.config.ts: Vite 构建配置；工作台版本由宿主 Header 统一展示，UI 包不重复注入版本号。
-src/: 资源浏览、预览与新建弹窗的 React 源码；成员细节见 `src/README.md`。
+vite.config.ts: Vite 构建配置；只将同级 Skill 的 `references/images` 图片槽位复制到创作台，工作台版本由宿主 Header 统一展示，UI 包不重复注入版本号。
+src/: 资源浏览、预览、风格参考图与新建弹窗的 React 源码；成员细节见 `src/README.md`。
 index.html: Vite 的 React 挂载入口。
 dist/: 由构建命令生成、由 manifest 提供给宿主的静态资源。
 
