@@ -71,7 +71,7 @@ function App() {
     setStatus("创作请求已填入右侧 Agent 输入框；发送后资源会自动出现。 ");
   };
   const startProjectBrief = async (input: ProjectBriefInput) => {
-    const prompt = `我要制作一支 AI 短片。\n\n立项信息：\n- 选题方向：${input.topic}\n- 补充信息：${input.details || "无额外补充"}\n- 风格模板：${input.styleTemplateId}\n- 成片画幅：${input.aspectRatio}\n- 预期时长：${input.expectedDurationSec} 秒\n\n请严格执行：\n1. 先调用 workflow.context。\n2. 仅调用 brief.create，传入以上 topic、details、styleTemplateId、aspectRatio、expectedDurationSec，冻结本片的导演配置。\n3. 然后到此停下，等待我确认开始资料研究。不要提出创作方案、写剧本、生成视觉设定、关键画面、声音或视频。\n\n资料研究开始后，先用 recut.media.create_reference 将文章、YouTube、小红书、抖音或网页资料登记成全局 reference 素材，再保存仅含 assetId 和研究结论的资料研究资源。必须让我确认资料足够后才进入创作方案。`;
+    const prompt = `我要制作一支 AI 短片。\n\n立项信息：\n- 选题方向：${input.topic}\n- 补充信息：${input.details || "无额外补充"}\n- 风格模板：${input.styleTemplateId}\n- 成片画幅：${input.aspectRatio}\n- 预期时长：${input.expectedDurationSec} 秒\n\n请严格执行：\n1. 先调用 workflow.context。\n2. 仅调用 brief.create，传入以上 topic、details、styleTemplateId、aspectRatio、expectedDurationSec，冻结本片的导演配置。\n3. 然后到此停下，等待我确认开始资料研究。不要提出创作方案、写剧本、生成视觉设定、关键画面、声音或视频。\n\n资料研究开始后，先用 recut.media.create_reference 将文章、YouTube、小红书、抖音或网页资料登记成全局 reference 素材：正文全文写入 content、图片字节写入 imageData（base64）、视频平台补齐频道/时长/播放/点赞等完整元数据；再保存仅含 assetId 和研究结论的资料研究资源。必须让我确认资料足够后才进入创作方案。`;
     if (!navigator.clipboard?.writeText) throw new Error("当前环境不支持自动复制，请手动复制右侧输入框中的任务书");
     await navigator.clipboard.writeText(prompt);
     await recut.agent.compose({ prompt });

@@ -385,7 +385,7 @@ function prepareResource(input, ctx) {
   })();
   const batch = /全部|所有|一次生成|all/i.test(instruction);
   const stageWorkflow = {
-    research: "先建立足够的证据库，再讨论故事。检索文章、YouTube、小红书、抖音、论文或原始资料；每条来源必须先用 recut.media.create_reference 登记为全局 reference 素材，资料研究仅保存 assetId、标题、类型、与本片相关的事实洞见和可信度/偏见判断。至少收集 3 条不同来源、覆盖支持与反例/限制后保存 status: 'draft' 并停下，绝不提前写剧本。",
+    research: "先建立足够的证据库，再讨论故事。检索文章、YouTube、小红书、抖音、论文或原始资料；每条来源必须先用 recut.media.create_reference 登记为全局 reference 素材：URL 只是身份，还要尽可能提交真实内容与完整元数据——文章/网页附 content 全文（真正可审阅的文章数据），有代表性的图片附 imageData(base64)（真正的图片数据），YouTube 等视频平台至少补齐频道名、频道 URL、时长、播放/点赞与描述；并保存规范的来源类型、标题、作者和发布时间。资料研究仅保存 assetId、标题、类型、与本片相关的事实洞见和可信度/偏见判断。至少收集 3 条不同来源、覆盖支持与反例/限制后保存 status: 'draft' 并停下，绝不提前写剧本。",
     proposals: "基于用户已确认的资料研究，提出 2–3 个显著不同的短片方案。每个候选给一句话梗概、核心论点、叙事弧、来源 assetId 列表与为什么现在值得看；保存 selectionStatus: 'pending' 并停下让用户选定，不能直接开始写剧本。",
     script: "只使用用户选定的创作方案和已确认的资料研究，写出可生产的剧本与场景方案。每一项 scenes[] 是约 5 秒的一个信息变化，必须带实际引用的 sourceIds；所有 durationSec 合计必须匹配立项的 expectedDurationSec。不要生成图片、声音或视频。",
     look: "读取立项中冻结的 styleTemplate。为本片生成一张匹配画幅的完整视觉圣经参考图：它必须包含全片主体、道具、信息元素、背景材料与层级，而不只是配色。media.text 必须保留原始提示词；definition 和导演方法必须结合 styleTemplate.visualPrompt 与 directorMethod。不要生成可读正文、标志或水印。完成后停下。",
