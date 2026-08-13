@@ -54,9 +54,9 @@ description: 将选题制作成可研究、可评审、可生成并可交给 Rem
 4. 连续性锚点：角色、材质、色彩、镜头世界不得漂移；
 5. 技术约束：使用立项画幅，不生成可读正文、标志或水印。
 
-图片生成必须先读取当前平台配置；使用 `recut.image.generate` 或宿主的原生图片能力。原生图片必须经 `recut.media.import_image` 归档，只有真实素材 ID 才能进入视觉设定或关键画面。
+图片生成必须先读取当前平台配置；使用 `recut.image.generate` 提交异步 job，立即取得稳定 jobId 与排队中 assetId，用 `recut.media.wait_for_job` 等它 `completed` 后再进入视觉设定或关键画面；或使用宿主的原生图片能力。原生图片必须经 `recut.media.import_image` 归档，只有真实且已完成的素材 ID 才能进入视觉设定或关键画面。绝不把排队中/生成中的素材当作已完成。
 
-声音设计的每个场景必须拥有真实旁白素材。使用 `recut.media.list_voices → recut.speech.generate_async`，等待终态后保存。场景视频一次默认只生产一个：以对应关键画面与声音设计的素材 ID 调用 `recut.video.generate_async`；视频提示词必须逐字包含旁白并声明参考音频为唯一人声，禁止新增语言。提交成功后立刻用稳定的排队中素材 ID 创建独立场景视频资源。
+声音设计的每个场景必须拥有真实旁白素材。使用 `recut.media.list_voices → recut.speech.generate`，等待终态后保存。场景视频一次默认只生产一个：以对应关键画面与声音设计的素材 ID 调用 `recut.video.generate`；视频提示词必须逐字包含旁白并声明参考音频为唯一人声，禁止新增语言。提交成功后立刻用稳定的排队中素材 ID 创建独立场景视频资源。
 
 不要用 HyperFrames、ffmpeg、浏览器自动化或本地渲染替代媒体生成。最终成片交付的两轨确定性导出是例外：由面板调用 `delivery.export → ctx.media.compose`。
 
