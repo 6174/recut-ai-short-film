@@ -5,6 +5,8 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 
+import { getRecutLocale } from "./recut-sdk";
+
 type VideoFrameProps = {
   alt: string;
   className?: string;
@@ -27,7 +29,8 @@ function classes(...values: Array<string | undefined>) {
 }
 
 function videoDocument(src: string, alt: string) {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>html,body,video{height:100%;width:100%;margin:0;background:#000}video{display:block;object-fit:cover}</style></head><body><video aria-label="${escapeAttribute(alt)}" autoplay loop muted playsinline preload="metadata" src="${escapeAttribute(src)}"></video></body></html>`;
+  const lang = getRecutLocale() === "en" ? "en" : "zh-CN";
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><style>html,body,video{height:100%;width:100%;margin:0;background:#000}video{display:block;object-fit:cover}</style></head><body><video aria-label="${escapeAttribute(alt)}" autoplay loop muted playsinline preload="metadata" src="${escapeAttribute(src)}"></video></body></html>`;
 }
 
 function escapeAttribute(value: string) {

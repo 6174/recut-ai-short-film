@@ -9,14 +9,31 @@ function scope(ctx) {
   return ctx.project ? ctx.project.id : "";
 }
 
+// 面向用户/Agent 的可见字符串按 ctx.locale（"zh" | "en"）选择；没有提供 ctx 或
+// 未命中时回退中文。机器标识（id、kind、字段名、operation 名）永不翻译。
+function localeOf(ctx) {
+  return ctx && ctx.locale === "en" ? "en" : "zh";
+}
+
+function text(ctx, zhText, enText) {
+  return localeOf(ctx) === "en" ? enText : zhText;
+}
+
+function fill(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? "");
+}
+
 // 风格模板是项目级导演配置，不是一次性的生成提示词。参考图在视觉设定阶段根据
 // referenceImagePrompt 物化为当前影片的真实素材；这样模板可稳定复用，也不会
 // 让不同项目错误共享私有素材。
+// TODO(i18n): visualPrompt/directorMethod 仍为中文（Agent 创作提示词），name/summary 已按 locale 双语。
 const styleTemplates = [
   {
     id: "editorial-vox",
     name: "Vox 编辑解说",
+    nameEn: "Vox-style essay",
     summary: "资料、数据与纸质拼贴推动一个清晰论点。",
+    summaryEn: "Research, data and paper collage drive a clear argument.",
     referenceGuide: "references/editorial-vox.md",
     referenceImages: [{ role: "封面", path: "references/images/editorial-vox/cover.png" }],
     referenceImagePrompt: "editorial paper collage world, torn newspaper, bold geometric data shapes, restrained red blue cream palette, no readable text, no logos",
@@ -26,7 +43,9 @@ const styleTemplates = [
   {
     id: "hand-drawn-essay",
     name: "手绘随笔",
+    nameEn: "Hand-drawn essay",
     summary: "铅笔、墨线与纸面动画，把抽象命题讲得亲近而具体。",
+    summaryEn: "Pencil, ink and on-paper animation tell concrete thoughts.",
     referenceGuide: "references/hand-drawn-essay.md",
     referenceImages: [{ role: "封面", path: "references/images/hand-drawn-essay/cover.png" }],
     referenceImagePrompt: "hand drawn essay film reference, pencil and ink lines on warm paper, watercolor accents, tactile notebook collage, cinematic composition, no readable text",
@@ -36,7 +55,9 @@ const styleTemplates = [
   {
     id: "animated-character",
     name: "卡通角色叙事",
+    nameEn: "Animated character story",
     summary: "固定角色与可识别的道具，适合情绪、故事和角色驱动的短片。",
+    summaryEn: "A fixed cast and visible actions drive the story.",
     referenceGuide: "references/animated-character.md",
     referenceImages: [{ role: "封面", path: "references/images/animated-character/cover.png" }],
     referenceImagePrompt: "stylized animated short film character sheet and key environment, expressive cartoon character, cinematic lighting, coherent prop language, no readable text",
@@ -45,12 +66,17 @@ const styleTemplates = [
   },
 ];
 
-function styleTemplateList() {
-  return styleTemplates.map((template) => ({ ...template }));
+function localizedStyleTemplate(template, ctx) {
+  if (localeOf(ctx) !== "en") return { ...template };
+  return { ...template, name: template.nameEn, summary: template.summaryEn };
 }
 
-function styleTemplate(id) {
-  return styleTemplates.find((template) => template.id === id) || styleTemplates[0];
+function styleTemplateList(ctx) {
+  return styleTemplates.map((template) => localizedStyleTemplate(template, ctx));
+}
+
+function styleTemplate(id, ctx) {
+  return localizedStyleTemplate(styleTemplates.find((template) => template.id === id) || styleTemplates[0], ctx);
 }
 
 function temporaryContextMentions(input, ctx) {
@@ -62,12 +88,12 @@ function temporaryContextMentions(input, ctx) {
     if (!id) return [];
     if (type === "project_item") {
       const resource = resourceByID(id, ctx);
-      return [`当前项目条目：${stageLabels[resource.kind] || resource.kind}「${resource.title}」（resource id: ${resource.id}；如需完整正文先调用 resource.read）`];
+      return [text(ctx, `当前项目条目：${stageLabels[resource.kind] || resource.kind}「${resource.title}」（resource id: ${resource.id}；如需完整正文先调用 resource.read）`, `Current project item: ${stageLabel(resource.kind, ctx)} "${resource.title}" (resource id: ${resource.id}; call resource.read for the full content)`)];
     }
     if (type === "system_asset") {
-      const name = String(mention.name || "系统素材").trim();
-      const kind = String(mention.kind || "素材").trim();
-      return [`系统素材：${name}（${kind}；assetId: ${id}）`];
+      const name = String(mention.name || text(ctx, "系统素材", "system asset")).trim();
+      const kind = String(mention.kind || text(ctx, "素材", "asset")).trim();
+      return [text(ctx, `系统素材：${name}（${kind}；assetId: ${id}）`, `System asset: ${name} (${kind}; assetId: ${id})`)];
     }
     return [];
   });
@@ -104,15 +130,15 @@ function purgeInvalidMediaResources(ctx) {
 function createBrief(input, ctx) {
   ensureSchema(ctx);
   const topic = String(input.topic || "").trim();
-  if (!topic) throw new Error("选题不能为空");
+  if (!topic) throw new Error(text(ctx, "选题不能为空", "Topic is required"));
   const details = String(input.details ?? "").trim();
   const expectedDurationSec = input.expectedDurationSec === undefined ? 60 : Number(input.expectedDurationSec);
-  if (!Number.isFinite(expectedDurationSec) || expectedDurationSec <= 0) throw new Error("预期时长必须是正数");
+  if (!Number.isFinite(expectedDurationSec) || expectedDurationSec <= 0) throw new Error(text(ctx, "预期时长必须是正数", "Expected duration must be a positive number"));
   const aspectRatio = String(input.aspectRatio || "16:9").trim();
-  if (!/^(16:9|9:16|1:1|4:5)$/.test(aspectRatio)) throw new Error("画幅必须是 16:9、9:16、1:1 或 4:5");
-  const selectedStyle = styleTemplate(String(input.styleTemplateId || "editorial-vox").trim());
+  if (!/^(16:9|9:16|1:1|4:5)$/.test(aspectRatio)) throw new Error(text(ctx, "画幅必须是 16:9、9:16、1:1 或 4:5", "Aspect ratio must be 16:9, 9:16, 1:1 or 4:5"));
+  const selectedStyle = styleTemplate(String(input.styleTemplateId || "editorial-vox").trim(), ctx);
   const existing = latestBrief({}, ctx);
-  if (existing && input.recreate !== true) throw new Error("项目已立项；如需从头重做，请在用户明确确认后传入 recreate: true。");
+  if (existing && input.recreate !== true) throw new Error(text(ctx, "项目已立项；如需从头重做，请在用户明确确认后传入 recreate: true。", "The project is already briefed; to redo from scratch, pass recreate: true only after the user explicitly confirms."));
   if (existing) {
     // 从头重做保留历史与既有 Artifact，但将旧创作路径整体归档，防止新旧资料、
     // 方案和媒体混在同一条工作流中。
@@ -127,9 +153,10 @@ function createBrief(input, ctx) {
     expectedDurationSec,
     aspectRatio,
     styleTemplate: selectedStyle,
-    title: `${topic}，为什么值得被看见`,
-    premise: details || `用一个清晰的因果链解释“${topic}”。`,
-    direction: `${selectedStyle.directorMethod} 全片按约 5 秒一个关键画面与信息变化拆分，总时长 ${expectedDurationSec} 秒，画幅 ${aspectRatio}。`,
+    title: text(ctx, `${topic}，为什么值得被看见`, `${topic}: why it deserves to be seen`),
+    premise: details || text(ctx, `用一个清晰的因果链解释“${topic}”。`, `Explain "${topic}" with a clear chain of cause and effect.`),
+    // TODO(i18n): directorMethod/visualPrompt 仍为中文（Agent 创作提示词），direction 因此会中英混排。
+    direction: text(ctx, `${selectedStyle.directorMethod} 全片按约 5 秒一个关键画面与信息变化拆分，总时长 ${expectedDurationSec} 秒，画幅 ${aspectRatio}。`, `${selectedStyle.directorMethod} Break the film into key frames and information beats of roughly 5 seconds each; total runtime ${expectedDurationSec} seconds, aspect ratio ${aspectRatio}.`),
     createdAt: new Date().toISOString(),
   };
   ctx.sqlite.execute(
@@ -157,6 +184,17 @@ const stageLabels = {
   proposal_review: "选定方案", script: "剧本与场景方案", look: "视觉设定",
   keyframes: "关键画面", audio: "声音设计", scenes: "场景视频", delivery: "成片交付", beats: "旧内容结构",
 };
+// 英文阶段键是既有资源和 MCP 的稳定机器标识；下面是与 stageLabels 对应的英文用户可见术语。
+const stageLabelsEn = {
+  brief: "Brief", research: "Research", research_review: "Confirm research", proposals: "Proposals",
+  proposal_review: "Select proposal", script: "Script & Scene Plan", look: "Visual Look",
+  keyframes: "Key Frames", audio: "Sound Design", scenes: "Scene Videos", delivery: "Delivery", beats: "Legacy Beats",
+};
+
+function stageLabel(kind, ctx) {
+  const table = localeOf(ctx) === "en" ? stageLabelsEn : stageLabels;
+  return table[kind] || kind;
+}
 const mediaSnapshotContract = {
   assetId: "string",
   text: "string",
@@ -264,7 +302,7 @@ function validateResourceContent(kind, content) {
 function validateScriptDuration(content, ctx) {
   const expectedDurationSec = Number(latestBrief({}, ctx)?.expectedDurationSec || 0);
   const durationSec = (content.scenes || []).reduce((total, scene) => total + Number(scene.durationSec || 0), 0);
-  if (!expectedDurationSec || durationSec !== expectedDurationSec) throw new Error(`剧本场景总时长必须等于立项的 ${expectedDurationSec} 秒；当前为 ${durationSec} 秒。`);
+  if (!expectedDurationSec || durationSec !== expectedDurationSec) throw new Error(text(ctx, `剧本场景总时长必须等于立项的 ${expectedDurationSec} 秒；当前为 ${durationSec} 秒。`, `Total scene runtime must equal the briefed ${expectedDurationSec} seconds; currently ${durationSec} seconds.`));
 }
 
 function workflowContext(_, ctx) {
@@ -294,18 +332,22 @@ function workflowContext(_, ctx) {
   return {
     revision: `${resources.length}:${resources[0]?.createdAt || "empty"}`,
     stage,
-    stageLabel: stageLabels[stage] || stage,
+    stageLabel: stageLabel(stage, ctx),
     nextAction: stage === "delivery" && latest("delivery") ? "review_delivery" : `create_${stage}`,
-    nextActionLabel: stage === "research_review" ? "等待用户确认资料" : stage === "proposal_review" ? "等待用户选定创作方案" : stage === "delivery" && latest("delivery") ? "检查成片交付或发布短片交接包" : `创建${stageLabels[stage] || stage}`,
+    nextActionLabel: stage === "research_review" ? text(ctx, "等待用户确认资料", "Waiting for you to confirm the research") : stage === "proposal_review" ? text(ctx, "等待用户选定创作方案", "Waiting for you to select a proposal") : stage === "delivery" && latest("delivery") ? text(ctx, "检查成片交付或发布短片交接包", "Review the final delivery or publish the film package") : localeOf(ctx) === "en" ? `Create ${stageLabelsEn[stage] || stage}` : `创建${stageLabels[stage] || stage}`,
     gates: { researchApproved, proposalSelected: Boolean(selectedProposal), scriptReady: Boolean(script), lookReady: Boolean(look) },
     inputs: { brief, research, proposals, selectedProposal, script, beats, look, keyframes, audio },
     resourceContracts,
-    styleTemplates: styleTemplateList(),
+    styleTemplates: styleTemplateList(ctx),
     mediaSnapshotContract,
     resources: Object.fromEntries(stageOrder.map((kind) => [kind, byKind[kind].map((item) => ({ id: item.id, title: item.title, createdAt: item.createdAt }))])),
     allowedActions,
-    terminology: { note: "stage、allowedActions、资源 kind 与字段名是稳定机器标识；对用户说明、任务书和创作内容一律使用中文术语。资源不保存跨阶段依赖；Agent 只从当前 workflow.context.inputs 读取可用上下文并自行推理。", stages: stageLabels },
+    terminology: {
+      note: text(ctx, "stage、allowedActions、资源 kind 与字段名是稳定机器标识；对用户说明、任务书和创作内容一律使用中文术语。资源不保存跨阶段依赖；Agent 只从当前 workflow.context.inputs 读取可用上下文并自行推理。", "stage, allowedActions, resource kinds and field names are stable machine identifiers; use the current UI language for user-facing explanations, briefs and creative content. Resources don't save cross-stage dependencies; the Agent only reads available context from workflow.context.inputs and reasons on its own."),
+      stages: localeOf(ctx) === "en" ? stageLabelsEn : stageLabels,
+    },
    pendingSceneTargets,
+    // TODO(i18n): mediaExecution.* 为 Agent 创作提示词，仍为中文，后续按 locale 双语。
     mediaExecution: {
       look: { kind: "平台图片生成", generate: "根据已选 styleTemplate.referenceImagePrompt 生成本片视觉圣经，并归档为稳定的 Recut 图片素材", complete: "在视觉设定资源中记录稳定图片 assetId、styleTemplate.visualPrompt 与 directorMethod" },
       keyframes: { kind: "平台图片生成", generate: "读取 recut.project_context；按配置使用 recut.image.generate 或宿主的 Codex 原生图片能力；所有原生结果必须经 recut.media.import_image 归档", complete: "在 resource.create 之前，原生结果须先写入当前项目并获得稳定图片 assetId" },
@@ -319,14 +361,14 @@ function workflowContext(_, ctx) {
 function approveResearch(input, ctx) {
   ensureSchema(ctx);
   const resource = resourceByID(String(input.id || "").trim(), ctx);
-  if (resource.kind !== "research") throw new Error("只能确认资料研究资源");
+  if (resource.kind !== "research") throw new Error(text(ctx, "只能确认资料研究资源", "Only research resources can be approved"));
   const sources = Array.isArray(resource.content?.sources) ? resource.content.sources : [];
-  if (sources.length < 3) throw new Error("至少需要 3 条不同来源的资料，才能确认进入方案阶段");
+  if (sources.length < 3) throw new Error(text(ctx, "至少需要 3 条不同来源的资料，才能确认进入方案阶段", "At least 3 distinct sources are required to approve and move to the proposal stage"));
   const sourceIDs = new Set(sources.map((source) => String(source?.assetId || "").trim()).filter(Boolean));
-  if (sourceIDs.size < 3) throw new Error("至少需要 3 条不同的资料素材，不能重复引用同一条资料。");
+  if (sourceIDs.size < 3) throw new Error(text(ctx, "至少需要 3 条不同的资料素材，不能重复引用同一条资料。", "At least 3 distinct research assets are required; you can't reference the same source more than once."));
   const workflow = workflowContext({}, ctx);
-  if (workflow.stage !== "research_review" || workflow.inputs.research?.id !== resource.id) throw new Error("当前不在资料确认阶段，不能确认这份资料研究。");
-  if (resource.content?.status === "approved") throw new Error("这份资料研究已经确认，无需重复操作。");
+  if (workflow.stage !== "research_review" || workflow.inputs.research?.id !== resource.id) throw new Error(text(ctx, "当前不在资料确认阶段，不能确认这份资料研究。", "You're not in the research confirmation stage, so this research can't be approved."));
+  if (resource.content?.status === "approved") throw new Error(text(ctx, "这份资料研究已经确认，无需重复操作。", "This research is already approved; no need to repeat."));
   return updateResource({ id: resource.id, contentPatch: { status: "approved", approvedAt: new Date().toISOString() }, gate: true }, ctx);
 }
 
@@ -334,12 +376,12 @@ function selectProposal(input, ctx) {
   ensureSchema(ctx);
   const resource = resourceByID(String(input.id || "").trim(), ctx);
   const candidateID = String(input.candidateId || "").trim();
-  if (resource.kind !== "proposals") throw new Error("只能选择创作方案资源中的候选方案");
+  if (resource.kind !== "proposals") throw new Error(text(ctx, "只能选择创作方案资源中的候选方案", "Only candidates in a proposals resource can be selected"));
   const candidate = Array.isArray(resource.content?.candidates) ? resource.content.candidates.find((item) => item?.id === candidateID) : null;
-  if (!candidate) throw new Error("找不到要选择的方案候选");
+  if (!candidate) throw new Error(text(ctx, "找不到要选择的方案候选", "The proposal candidate to select wasn't found"));
   const workflow = workflowContext({}, ctx);
-  if (workflow.stage !== "proposal_review" || workflow.inputs.proposals?.id !== resource.id) throw new Error("当前不在方案选定阶段，不能选定这个方案。");
-  if (resource.content?.selectedProposalId) throw new Error("这份创作方案已经选定，不能悄悄改写既有叙事决定。");
+  if (workflow.stage !== "proposal_review" || workflow.inputs.proposals?.id !== resource.id) throw new Error(text(ctx, "当前不在方案选定阶段，不能选定这个方案。", "You're not in the proposal selection stage, so this proposal can't be selected."));
+  if (resource.content?.selectedProposalId) throw new Error(text(ctx, "这份创作方案已经选定，不能悄悄改写既有叙事决定。", "This proposals resource is already selected; existing narrative decisions can't be silently rewritten."));
   return updateResource({ id: resource.id, contentPatch: { selectionStatus: "selected", selectedProposalId: candidateID, selectedAt: new Date().toISOString() }, gate: true }, ctx);
 }
 
@@ -347,7 +389,7 @@ function filmPackage(_, ctx) {
   ensureSchema(ctx);
   const workflow = workflowContext({}, ctx);
   const resources = listResources({}, ctx);
-  if (workflow.stage !== "delivery" || !resources.some((resource) => resource.kind === "delivery")) throw new Error("只有完成成片交付后，才能发布短片交接包。");
+  if (workflow.stage !== "delivery" || !resources.some((resource) => resource.kind === "delivery")) throw new Error(text(ctx, "只有完成成片交付后，才能发布短片交接包。", "The film package can only be published after the final delivery is completed."));
   const byKind = Object.fromEntries(stageOrder.map((kind) => [kind, resources.filter((resource) => resource.kind === kind)]));
   const packageValue = {
     format: "recut.ai-short-film.package@1",
@@ -362,7 +404,7 @@ function filmPackage(_, ctx) {
       scenes: byKind.scenes.map((scene) => ({ sceneId: scene.content?.beatId || scene.id, assetId: scene.content?.video?.assetId || null, durationSec: scene.content?.durationSec || null })),
       deliveries: byKind.delivery.map((delivery) => ({ assetId: delivery.content?.assetId || null, settings: delivery.content?.settings || null })),
     },
-    remotionHandoff: "在 Remotion Studio 新建项目后，读取此短片交接包；将关键画面、声音设计、场景视频中的稳定 assetId 作为素材输入，复用剧本场景的时序与风格模板的视觉/导演约束。Remotion 负责代码化编排，不重写已确认的叙事决定。",
+    remotionHandoff: text(ctx, "在 Remotion Studio 新建项目后，读取此短片交接包；将关键画面、声音设计、场景视频中的稳定 assetId 作为素材输入，复用剧本场景的时序与风格模板的视觉/导演约束。Remotion 负责代码化编排，不重写已确认的叙事决定。", "After creating a project in Remotion Studio, read this film package; use the stable assetIds from the key frames, sound design and scene videos as asset inputs, and reuse the script scene timing plus the style template's visual/directorial constraints. Remotion handles the code-based assembly and doesn't rewrite confirmed narrative decisions."),
   };
   return ctx.artifacts.publish({ type: "recut.ai-short-film.package@1", value: packageValue });
 }
@@ -370,10 +412,10 @@ function filmPackage(_, ctx) {
 function prepareResource(input, ctx) {
   ensureSchema(ctx);
   const kind = normalizeResourceKind(String(input.kind || "").trim());
-  if (!kind || !resourceContracts[kind] || kind === "brief" || kind === "beats") throw new Error("不是可创建的短片阶段。");
+  if (!kind || !resourceContracts[kind] || kind === "brief" || kind === "beats") throw new Error(text(ctx, "不是可创建的短片阶段。", "Not a creatable short-film stage."));
   const workflow = workflowContext({}, ctx);
-  if (!workflow.allowedActions.includes(`create_${kind}`)) throw new Error(`当前处于“${workflow.stageLabel}”，下一步是“${workflow.nextActionLabel}”。`);
-  const instruction = String(input.instruction || "无额外要求");
+  if (!workflow.allowedActions.includes(`create_${kind}`)) throw new Error(text(ctx, `当前处于“${workflow.stageLabel}”，下一步是“${workflow.nextActionLabel}”。`, `Currently in “${workflow.stageLabel}”; next step is “${workflow.nextActionLabel}”.`));
+  const instruction = String(input.instruction || text(ctx, "无额外要求", "No extra requirements"));
   const contextMentions = temporaryContextMentions(input, ctx);
   const sceneTargets = (() => {
     if (kind.toLowerCase() !== "scenes") return [];
@@ -384,6 +426,8 @@ function prepareResource(input, ctx) {
     return (audio?.content?.scenes || []).filter((scene) => scene?.beatId && !completed.has(scene.beatId)).map((scene) => ({ beatId: scene.beatId, narration: scene.narration, durationSec: scene.durationSec, audio: scene.audio, keyframe: (keyframes?.content?.keyframes || []).find((frame) => frame?.beatId === scene.beatId)?.image }));
   })();
   const batch = /全部|所有|一次生成|all/i.test(instruction);
+  // TODO(i18n): 下方 stageWorkflow、executionMethod、interfaceText 与最终 prompt 是发给 Agent 的中文
+  // 创作任务书；本次仅本地化错误信息、默认标题与阶段术语，任务书本身仍保持中文。
   const stageWorkflow = {
     research: "先建立足够的证据库，再讨论故事。检索文章、YouTube、小红书、抖音、论文或原始资料；每条来源必须先用 recut.media.create_reference 登记为全局 reference 素材：URL 只是身份，还要尽可能提交真实内容与完整元数据——文章/网页附 content 全文（真正可审阅的文章数据），有代表性的图片附 imageData(base64)（真正的图片数据），YouTube 等视频平台至少补齐频道名、频道 URL、时长、播放/点赞与描述；并保存规范的来源类型、标题、作者和发布时间。资料研究仅保存 assetId、标题、类型、与本片相关的事实洞见和可信度/偏见判断。至少收集 3 条不同来源、覆盖支持与反例/限制后保存 status: 'draft' 并停下，绝不提前写剧本。",
     proposals: "基于用户已确认的资料研究，提出 2–3 个显著不同的短片方案。每个候选给一句话梗概、核心论点、叙事弧、来源 assetId 列表与为什么现在值得看；保存 selectionStatus: 'pending' 并停下让用户选定，不能直接开始写剧本。",
@@ -408,15 +452,15 @@ function prepareResource(input, ctx) {
 function createResource(input, ctx) {
   ensureSchema(ctx);
   const kind = String(input.kind || "").toLowerCase();
-  if (!kind) throw new Error("资源类型不能为空");
+  if (!kind) throw new Error(text(ctx, "资源类型不能为空", "Resource kind is required"));
   const contract = resourceContracts[kind];
-  if (!contract || kind === "brief" || kind === "beats" || kind === "delivery") throw new Error(`未知或不可创建的资源阶段：${kind}`);
-  if (!input.content || typeof input.content !== "object") throw new Error(`${stageLabels[kind] || kind} 需要结构化内容`);
+  if (!contract || kind === "brief" || kind === "beats" || kind === "delivery") throw new Error(text(ctx, `未知或不可创建的资源阶段：${kind}`, `Unknown or non-creatable resource stage: ${kind}`));
+  if (!input.content || typeof input.content !== "object") throw new Error(text(ctx, `${stageLabels[kind] || kind} 需要结构化内容`, `${stageLabel(kind, ctx)} requires structured content`));
   const workflow = workflowContext({}, ctx);
   const expectedAction = `create_${kind}`;
-  if (!workflow.allowedActions.includes(expectedAction)) throw new Error(`当前处于“${workflow.stageLabel}”，不允许创建“${stageLabels[kind] || kind}”。下一步是“${workflow.nextActionLabel}”。`);
-  if (kind === "research" && input.content.status !== "draft") throw new Error("资料研究创建时必须处于 draft，是否足够只能由用户确认。");
-  if (kind === "proposals" && (input.content.selectionStatus !== "pending" || input.content.selectedProposalId)) throw new Error("创作方案创建时必须处于 pending，选定方案只能通过 proposal.select。 ");
+  if (!workflow.allowedActions.includes(expectedAction)) throw new Error(text(ctx, `当前处于“${workflow.stageLabel}”，不允许创建“${stageLabels[kind] || kind}”。下一步是“${workflow.nextActionLabel}”。`, `Currently in “${workflow.stageLabel}”; creating “${stageLabel(kind, ctx)}” isn't allowed. Next step is “${workflow.nextActionLabel}”.`));
+  if (kind === "research" && input.content.status !== "draft") throw new Error(text(ctx, "资料研究创建时必须处于 draft，是否足够只能由用户确认。", "Research must be created as draft; only the user decides whether it's sufficient."));
+  if (kind === "proposals" && (input.content.selectionStatus !== "pending" || input.content.selectedProposalId)) throw new Error(text(ctx, "创作方案创建时必须处于 pending，选定方案只能通过 proposal.select。 ", "Proposals must be created as pending; selection can only happen through proposal.select. "));
   validateResourceContent(kind, input.content);
   if (kind === "script") validateScriptDuration(input.content, ctx);
   return persistResource(kind, input.title, input.content, ctx);
@@ -466,10 +510,10 @@ function updateResource(input, ctx) {
   const contentPatch = input.contentPatch && typeof input.contentPatch === "object" && !Array.isArray(input.contentPatch) ? input.contentPatch : null;
   const itemPatch = input.itemPatch && typeof input.itemPatch === "object" && !Array.isArray(input.itemPatch) ? input.itemPatch : null;
   if (!contentPatch && !itemPatch && !String(input.title || "").trim()) throw new Error("resource.update requires title, contentPatch, or itemPatch");
-  if (!input.gate && resource.kind === "research" && (Object.hasOwn(contentPatch || {}, "status") || Object.hasOwn(contentPatch || {}, "approvedAt"))) throw new Error("资料确认只能通过 research.approve。 ");
-  if (!input.gate && resource.kind === "proposals" && (Object.hasOwn(contentPatch || {}, "selectionStatus") || Object.hasOwn(contentPatch || {}, "selectedProposalId") || Object.hasOwn(contentPatch || {}, "selectedAt"))) throw new Error("方案选定只能通过 proposal.select。 ");
-  if (resource.kind === "research" && resource.content?.status === "approved") throw new Error("资料研究已经确认；如需修改，请新建资料研究并重新确认。");
-  if (resource.kind === "proposals" && resource.content?.selectedProposalId) throw new Error("创作方案已经选定；如需改写叙事，请新建创作方案并重新选定。");
+  if (!input.gate && resource.kind === "research" && (Object.hasOwn(contentPatch || {}, "status") || Object.hasOwn(contentPatch || {}, "approvedAt"))) throw new Error(text(ctx, "资料确认只能通过 research.approve。 ", "Research confirmation can only happen through research.approve. "));
+  if (!input.gate && resource.kind === "proposals" && (Object.hasOwn(contentPatch || {}, "selectionStatus") || Object.hasOwn(contentPatch || {}, "selectedProposalId") || Object.hasOwn(contentPatch || {}, "selectedAt"))) throw new Error(text(ctx, "方案选定只能通过 proposal.select。 ", "Proposal selection can only happen through proposal.select. "));
+  if (resource.kind === "research" && resource.content?.status === "approved") throw new Error(text(ctx, "资料研究已经确认；如需修改，请新建资料研究并重新确认。", "This research is already approved; to change it, create new research and confirm it again."));
+  if (resource.kind === "proposals" && resource.content?.selectedProposalId) throw new Error(text(ctx, "创作方案已经选定；如需改写叙事，请新建创作方案并重新选定。", "This proposals resource is already selected; to rewrite the narrative, create new proposals and select again."));
   const content = JSON.parse(JSON.stringify(resource.content));
   if (contentPatch) Object.assign(content, contentPatch);
   if (itemPatch) {
@@ -503,13 +547,13 @@ function timelineDuration(track) {
 
 function exportDelivery(input, ctx) {
   ensureSchema(ctx);
-  if (!ctx.media || typeof ctx.media.compose !== "function") throw new Error("平台导出能力不可用，请重启 Recut 后重试。");
+  if (!ctx.media || typeof ctx.media.compose !== "function") throw new Error(text(ctx, "平台导出能力不可用，请重启 Recut 后重试。", "The platform export capability is unavailable; please restart Recut and retry."));
   const workflow = workflowContext({}, ctx);
-  if (!workflow.allowedActions.includes("create_delivery")) throw new Error(`当前处于“${workflow.stageLabel}”，下一步是“${workflow.nextActionLabel}”。`);
+  if (!workflow.allowedActions.includes("create_delivery")) throw new Error(text(ctx, `当前处于“${workflow.stageLabel}”，下一步是“${workflow.nextActionLabel}”。`, `Currently in “${workflow.stageLabel}”; next step is “${workflow.nextActionLabel}”.`));
   const videoTimeline = Array.isArray(input.videoTimeline) ? input.videoTimeline : [];
   const audioTimeline = Array.isArray(input.audioTimeline) ? input.audioTimeline : [];
   const settings = input.settings && typeof input.settings === "object" && !Array.isArray(input.settings) ? input.settings : {};
-  if (!videoTimeline.length) throw new Error("至少需要一个场景视频片段才能导出成片。");
+  if (!videoTimeline.length) throw new Error(text(ctx, "至少需要一个场景视频片段才能导出成片。", "At least one scene video clip is required to export the film."));
   const asset = ctx.media.compose({ videoTimeline, audioTimeline, settings });
   ctx.project.setCover({ assetId: asset.id });
   const duration = timelineDuration(videoTimeline);
@@ -518,15 +562,15 @@ function exportDelivery(input, ctx) {
     aspectRatio,
     duration,
     format: "MP4 / H.264 + AAC",
-    export: `已导出为新素材：${asset.id}`,
-    checklist: ["视频轨已按顺序合成并保留原声", audioTimeline.length ? "音频轨已与视频原声混合" : "未额外选择音频轨", `导出尺寸：${aspectRatio}`, `帧率：${settings.fps || 30} fps`],
+    export: text(ctx, `已导出为新素材：${asset.id}`, `Exported as a new asset: ${asset.id}`),
+    checklist: [text(ctx, "视频轨已按顺序合成并保留原声", "Video track composed in order with the original sound preserved"), audioTimeline.length ? text(ctx, "音频轨已与视频原声混合", "Audio track mixed with the video's original sound") : text(ctx, "未额外选择音频轨", "No extra audio track selected"), text(ctx, `导出尺寸：${aspectRatio}`, `Export size: ${aspectRatio}`), `帧率：${settings.fps || 30} fps`],
     assetId: asset.id,
     videoTimeline,
     audioTimeline,
     settings,
   };
   validateResourceContent("delivery", content);
-  persistResource("delivery", `成片交付 · ${new Date().toLocaleString("zh-CN")}`, content, ctx);
+  persistResource("delivery", text(ctx, `成片交付 · ${new Date().toLocaleString("zh-CN")}`, `Delivery · ${new Date().toLocaleString("en-US")}`), content, ctx);
   return asset;
 }
 

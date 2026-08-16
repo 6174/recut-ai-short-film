@@ -6,6 +6,8 @@
  */
 import { useEffect, useState } from "react";
 import type { Resource } from "./main";
+import { getRecutLocale, useRecutLocale, type Locale } from "./recut-sdk";
+import { t } from "./i18n";
 import { type AssetState, useMediaAssetEvents } from "./use-media-asset-events";
 import { VideoFrame } from "./video-frame";
 
@@ -13,19 +15,13 @@ type RecordValue = Record<string, unknown>;
 type MediaSnapshot = { assetId?: string; text?: string; imageAssetIds?: string[] };
 type LookContent = { media?: MediaSnapshot; definition?: string };
 
-const labels: Record<string, string> = {
-  topic: "主题", premise: "核心观点", direction: "创作方向", summary: "摘要", definition: "风格定义", prompt: "生成提示词",
-  palette: "色彩", paperTechnique: "纸张技法", typeTreatment: "字体处理", texture: "纹理", mood: "情绪",
-  styleTemplate: "导演风格", expectedDurationSec: "预期时长", researchQuestion: "研究问题", coverageSummary: "资料覆盖", status: "审核状态", sources: "资料来源", framing: "方案框架", selectionStatus: "选择状态", candidates: "候选方案", logline: "一句话梗概", thesis: "核心论点", narrativeArc: "叙事弧", whyNow: "为什么现在", screenplay: "剧本", visualPlan: "视觉计划", sourceIds: "资料引用", directorMethod: "导演方法",
-  hook: "开场钩子", narrative: "叙事", composition: "画面构图", headline: "画面标题", layers: "画面层次",
-  scene: "场景", videoDirection: "视频方向", narration: "旁白", music: "音乐", captions: "字幕", mix: "混音",
-  aspectRatio: "画幅", duration: "时长", format: "格式", export: "导出", checklist: "检查清单",
-};
-
 const mediaURL = (assetId: string) => `/v1/media/assets/${encodeURIComponent(assetId)}/content`;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
-const text = (value: unknown) => Array.isArray(value) ? value.map(text).filter(Boolean).join("、") : typeof value === "string" || typeof value === "number" ? String(value) : "";
-const title = (key: string) => labels[key] || key.replace(/([A-Z])/g, " $1").trim();
+const text = (value: unknown, locale: Locale = getRecutLocale()): string => Array.isArray(value) ? value.map((item) => text(item, locale)).filter(Boolean).join(locale === "en" ? ", " : "、") : typeof value === "string" || typeof value === "number" ? String(value) : "";
+const title = (key: string, locale: Locale) => {
+  const lookup = t(locale, `field.${key}`);
+  return lookup !== `field.${key}` ? lookup : key.replace(/([A-Z])/g, " $1").trim();
+};
 const isLook = (resource: Resource) => resource.kind.toLowerCase() === "look";
 const isGenerating = (asset: AssetState | null) => asset?.status === "queued" || asset?.status === "running";
 
@@ -68,22 +64,24 @@ function useGenerationElapsedMs(asset: AssetState | null) {
 }
 
 function GenerationDuration({ asset, overlay = false }: { asset: AssetState | null; overlay?: boolean }) {
+  const locale = useRecutLocale();
   const elapsed = useGenerationElapsedMs(asset);
   if (elapsed === null) return null;
-  const label = isGenerating(asset) ? `${asset?.status === "queued" ? "等待生成" : "生成中"} · ${formatGenerationDuration(elapsed)}` : `生成耗时 · ${formatGenerationDuration(elapsed)}`;
+  const label = isGenerating(asset) ? `${asset?.status === "queued" ? t(locale, "view.queued") : t(locale, "view.generating")} · ${formatGenerationDuration(elapsed)}` : t(locale, "view.generationTime", { time: formatGenerationDuration(elapsed) });
   return <p className={overlay ? "absolute bottom-1.5 right-1.5 rounded bg-background/90 px-1.5 py-0.5 font-mono text-[10px] text-foreground shadow-sm backdrop-blur" : "mt-1 font-mono text-[11px] text-muted-foreground"}>{label}</p>;
 }
 
 export function useAssetState(assetId: string) {
   const { assetByID, ready } = useMediaAssetEvents();
-  return assetByID[assetId] ?? (ready ? { id: assetId, kind: "image" as const, status: "failed" as const, error: "素材不存在或已被删除" } : null);
+  return assetByID[assetId] ?? (ready ? { id: assetId, kind: "image" as const, status: "failed" as const, error: t(getRecutLocale(), "view.assetMissing") } : null);
 }
 
 function PendingMedia({ asset, compact = false }: { asset: AssetState | null; compact?: boolean }) {
+  const locale = useRecutLocale();
   const failed = asset?.status === "failed";
   const loading = !asset;
-  const pendingLabel = asset?.status === "queued" ? "等待生成…" : "生成中…";
-  return <div className={`grid place-items-center border border-dashed bg-muted/40 px-3 text-center text-xs text-muted-foreground ${compact ? "size-full border-0" : "min-h-20 rounded"}`}><div><p className={failed ? "font-medium text-destructive" : "font-medium text-primary"}>{failed ? "生成失败" : loading ? "正在读取素材…" : pendingLabel}</p><GenerationDuration asset={asset} /><p className="mt-1 text-[11px] leading-4">{asset?.error || "素材引用已建立，完成后会原位可播放。"}</p></div></div>;
+  const pendingLabel = asset?.status === "queued" ? t(locale, "view.queuedPending") : t(locale, "view.generatingPending");
+  return <div className={`grid place-items-center border border-dashed bg-muted/40 px-3 text-center text-xs text-muted-foreground ${compact ? "size-full border-0" : "min-h-20 rounded"}`}><div><p className={failed ? "font-medium text-destructive" : "font-medium text-primary"}>{failed ? t(locale, "view.failed") : loading ? t(locale, "view.loading") : pendingLabel}</p><GenerationDuration asset={asset} /><p className="mt-1 text-[11px] leading-4">{asset?.error || t(locale, "view.referenceReady")}</p></div></div>;
 }
 
 export function AssetImagePreview({ alt, assetId, className, compact = false }: { alt: string; assetId: string; className: string; compact?: boolean }) {
@@ -93,16 +91,18 @@ export function AssetImagePreview({ alt, assetId, className, compact = false }: 
 }
 
 function AssetPlayer({ assetId, kind }: { assetId: string; kind: "video" | "audio" }) {
+  const locale = useRecutLocale();
   const asset = useAssetState(assetId);
   if (!asset || asset.status !== "completed") return <PendingMedia asset={asset} />;
-  const player = kind === "video" ? <VideoFrame alt="场景视频" className="w-full rounded-md border" controls src={mediaURL(assetId)} /> : <audio className="w-full" controls src={mediaURL(assetId)} />;
+  const player = kind === "video" ? <VideoFrame alt={t(locale, "view.sceneVideo")} className="w-full rounded-md border" controls src={mediaURL(assetId)} /> : <audio className="w-full" controls src={mediaURL(assetId)} />;
   return <div className="grid gap-1">{player}<GenerationDuration asset={asset} /></div>;
 }
 
 export function AssetVideoPreview({ assetId, title }: { assetId: string; title: string }) {
+  const locale = useRecutLocale();
   const asset = useAssetState(assetId);
   if (!asset || asset.status !== "completed") return <PendingMedia asset={asset} compact />;
-  return <div className="relative size-full"><VideoFrame alt={`${title} 视频预览`} className="size-full !aspect-auto" src={mediaURL(assetId)} /><GenerationDuration asset={asset} overlay /></div>;
+  return <div className="relative size-full"><VideoFrame alt={t(locale, "view.videoPreview", { title })} className="size-full !aspect-auto" src={mediaURL(assetId)} /><GenerationDuration asset={asset} overlay /></div>;
 }
 
 export function isLegacyLook(resource: Resource) {
@@ -185,9 +185,10 @@ export function resourcePreviewLines(resource: Resource) {
 }
 
 function AssetImages({ content, compact = false }: { content: RecordValue; compact?: boolean }) {
+  const locale = useRecutLocale();
   const assetIDs = imageIDs(content);
   if (!assetIDs.length) return null;
-  return <div className={compact ? "aspect-video overflow-hidden rounded-md bg-muted" : "grid gap-3 sm:grid-cols-2"}>{assetIDs.map((id) => <AssetImagePreview alt="创作参考图" assetId={id} className={compact ? "size-full" : "aspect-video w-full rounded-md border"} compact={compact} key={id} />)}</div>;
+  return <div className={compact ? "aspect-video overflow-hidden rounded-md bg-muted" : "grid gap-3 sm:grid-cols-2"}>{assetIDs.map((id) => <AssetImagePreview alt={t(locale, "view.referenceImage")} assetId={id} className={compact ? "size-full" : "aspect-video w-full rounded-md border"} compact={compact} key={id} />)}</div>;
 }
 
 function MediaPlayers({ content, compact }: { content: RecordValue; compact: boolean }) {
@@ -198,54 +199,57 @@ function MediaPlayers({ content, compact }: { content: RecordValue; compact: boo
   return <div className="grid gap-3">{videos.map((id) => <AssetPlayer assetId={id} key={id} kind="video" />)}{audio.map((id) => <AssetPlayer assetId={id} key={id} kind="audio" />)}</div>;
 }
 
-function Field({ name, value }: { name: string; value: unknown }) {
-  const content = text(value);
-  return content ? <div className="grid gap-1"><dt className="text-xs font-medium text-muted-foreground">{title(name)}</dt><dd className="text-sm leading-6 text-foreground">{content}</dd></div> : null;
+function Field({ name, value, locale }: { name: string; value: unknown; locale: Locale }) {
+  const content = text(value, locale);
+  return content ? <div className="grid gap-1"><dt className="text-xs font-medium text-muted-foreground">{title(name, locale)}</dt><dd className="text-sm leading-6 text-foreground">{content}</dd></div> : null;
 }
 
-function ItemList({ items, titleKey }: { items: unknown; titleKey: string }) {
+function ItemList({ items, titleKey, locale }: { items: unknown; titleKey: string; locale: Locale }) {
   if (!Array.isArray(items) || !items.length) return null;
-  return <div className="grid gap-2"><p className="text-xs font-medium text-muted-foreground">{title(titleKey)}</p><ol className="grid gap-2">{items.map((item, index) => {
+  return <div className="grid gap-2"><p className="text-xs font-medium text-muted-foreground">{t(locale, titleKey)}</p><ol className="grid gap-2">{items.map((item, index) => {
     const value = record(item);
-    const heading = itemHeading(value, item) || `第 ${index + 1} 项`;
+    const heading = itemHeading(value, item) || t(locale, "view.itemFallback", { index: index + 1 });
     const detail = itemDetails(value).filter((detail) => detail !== heading).join(" · ");
     const image = snapshotAssetID(value.image) || text(value.imageAssetId);
     const video = snapshotAssetID(value.video) || text(value.videoAssetId);
     const audio = audioSnapshotID(value);
-    return <li className="grid gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm" key={`${heading}-${index}`}><p className="font-medium">{index + 1}. {heading}</p>{detail && detail !== heading && <p className="leading-5 text-muted-foreground">{detail}</p>}{image && <AssetImagePreview alt={`${heading} 参考图`} assetId={image} className="aspect-video w-full rounded border" />}{video && <AssetPlayer assetId={video} kind="video" />}{audio && <AssetPlayer assetId={audio} kind="audio" />}</li>;
+    return <li className="grid gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm" key={`${heading}-${index}`}><p className="font-medium">{index + 1}. {heading}</p>{detail && detail !== heading && <p className="leading-5 text-muted-foreground">{detail}</p>}{image && <AssetImagePreview alt={t(locale, "view.itemReferenceImage", { heading })} assetId={image} className="aspect-video w-full rounded border" />}{video && <AssetPlayer assetId={video} kind="video" />}{audio && <AssetPlayer assetId={audio} kind="audio" />}</li>;
   })}</ol></div>;
 }
 
 function LookView({ content, compact }: { content: RecordValue; compact: boolean }) {
+  const locale = useRecutLocale();
   const look = content as LookContent;
   const media = look.media || {};
   const incomplete = !media.assetId || !media.text;
-  if (incomplete) return <div className="rounded-md border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">{compact ? "缺少参考图与原始提示词，需重新生成。" : "旧格式资源：未保存风格参考图和原始提示词。请移出当前方案后重新生成，不能把它当作有效视觉风格。"}</div>;
-  return <div className="grid gap-3"><AssetImages compact={compact} content={{ ...content, assetId: media.assetId }} />{!compact && <Field name="prompt" value={media.text} />}{!compact && <Field name="definition" value={look.definition} />}{compact && <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{media.text || look.definition || "缺少风格提示词"}</p>}{!compact && <div className="grid gap-3 sm:grid-cols-2"><Field name="palette" value={content.palette} /><Field name="paperTechnique" value={content.paperTechnique} /><Field name="typeTreatment" value={content.typeTreatment} /><Field name="texture" value={content.texture} /><Field name="mood" value={content.mood} /></div>}</div>;
+  if (incomplete) return <div className="rounded-md border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">{compact ? t(locale, "view.lookMissing") : t(locale, "view.lookLegacy")}</div>;
+  return <div className="grid gap-3"><AssetImages compact={compact} content={{ ...content, assetId: media.assetId }} />{!compact && <Field name="prompt" value={media.text} locale={locale} />}{!compact && <Field name="definition" value={look.definition} locale={locale} />}{compact && <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{media.text || look.definition || t(locale, "view.lookPromptMissing")}</p>}{!compact && <div className="grid gap-3 sm:grid-cols-2"><Field name="palette" value={content.palette} locale={locale} /><Field name="paperTechnique" value={content.paperTechnique} locale={locale} /><Field name="typeTreatment" value={content.typeTreatment} locale={locale} /><Field name="texture" value={content.texture} locale={locale} /><Field name="mood" value={content.mood} locale={locale} /></div>}</div>;
 }
 
 function StageView({ resource, compact }: { resource: Resource; compact: boolean }) {
+  const locale = useRecutLocale();
   const content = record(resource.content);
   if (isLook(resource)) return <LookView compact={compact} content={content} />;
   const kind = resource.kind.toLowerCase();
   const list = kind === "research" ? content.sources : kind === "proposals" ? content.candidates : kind === "script" ? content.scenes : kind === "beats" ? content.beats || content.items : kind === "keyframes" ? content.keyframes || content.shots : kind === "audio" ? content.scenes : kind === "scenes" ? content.scenes || content.shots : kind === "delivery" ? content.checklist : undefined;
   const fields = kind === "brief" ? ["topic", "details", "styleTemplate", "aspectRatio", "expectedDurationSec", "premise", "direction"] : kind === "research" ? ["researchQuestion", "coverageSummary", "status"] : kind === "proposals" ? ["framing", "selectionStatus"] : kind === "script" ? ["title", "logline", "screenplay"] : kind === "beats" ? ["hook", "narrative", "summary"] : kind === "keyframes" ? ["composition", "headline", "layers"] : kind === "audio" ? ["narration", "music", "captions", "mix"] : kind === "scenes" ? ["beatId", "durationSec", "visualAction", "cutPoint"] : kind === "delivery" ? ["aspectRatio", "duration", "format", "export"] : ["summary", "definition", "direction"];
-  const first = fields.map((key) => text(content[key])).find(Boolean) || text(resource.content) || "尚未填写可展示内容";
+  const first = fields.map((key) => text(content[key])).find(Boolean) || text(resource.content) || t(locale, "view.noContent");
   if (compact) return <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{first}</p>;
   const exportedVideo = kind === "delivery" ? text(content.assetId) : "";
-  return <div className="grid gap-4">{exportedVideo ? <AssetPlayer assetId={exportedVideo} kind="video" /> : <><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /></>}<dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} />)}</dl><ItemList items={list} titleKey={kind === "research" ? "资料来源" : kind === "proposals" ? "候选方案" : kind === "script" ? "场景方案" : kind === "keyframes" ? "关键画面" : kind === "audio" ? "声音时间线" : kind === "scenes" ? "场景视频" : kind === "delivery" ? "检查清单" : "叙事节拍"} /></div>;
+  return <div className="grid gap-4">{exportedVideo ? <AssetPlayer assetId={exportedVideo} kind="video" /> : <><AssetImages content={content} /><MediaPlayers compact={compact} content={content} /></>}<dl className="grid gap-3 sm:grid-cols-2">{fields.map((key) => <Field key={key} name={key} value={content[key]} locale={locale} />)}</dl><ItemList items={list} titleKey={kind === "research" ? "view.list.sources" : kind === "proposals" ? "view.list.candidates" : kind === "script" ? "view.list.scenes" : kind === "keyframes" ? "view.list.keyframes" : kind === "audio" ? "view.list.audio" : kind === "scenes" ? "view.list.sceneVideos" : kind === "delivery" ? "view.list.checklist" : "view.list.beats"} locale={locale} /></div>;
 }
 
 export function resourceSummary(resource: Resource) {
   const content = record(resource.content);
-  if (isLook(resource)) return text(content.definition || record(content.media).text) || "视觉风格参考图";
-  return resourcePreviewLines(resource)[0] || "点击查看完整内容";
+  if (isLook(resource)) return text(content.definition || record(content.media).text) || t(getRecutLocale(), "view.styleReference");
+  return resourcePreviewLines(resource)[0] || t(getRecutLocale(), "view.clickForDetails");
 }
 
 export function ResourcePresentation({ compact = false, resource }: { compact?: boolean; resource: Resource }) {
   return <StageView compact={compact} resource={resource} />;
 }
 
-export function resourceKindLabel(kind: string) {
-  return ({ Brief: "立项", Research: "资料研究", Proposals: "创作方案", Script: "剧本与场景方案", Beats: "旧内容结构", Look: "视觉设定", Keyframes: "关键画面", Audio: "声音设计", Scenes: "场景视频", Delivery: "成片交付" } as Record<string, string>)[kind] || kind;
+export function resourceKindLabel(kind: string, locale: Locale = "zh") {
+  const lookup = t(locale, `kind.${kind.toLowerCase()}`);
+  return lookup === `kind.${kind.toLowerCase()}` ? kind : lookup;
 }

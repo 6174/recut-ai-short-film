@@ -89,7 +89,7 @@ function AssetEventsConnection({ children }: { children: ReactNode }) {
       }));
       if (!active) return;
       setEvents((current) => {
-        const updates = assets.filter((asset): asset is AssetState => Boolean(asset) && !sameAsset(current.assetByID[asset.id] ?? asset, asset));
+        const updates = assets.flatMap((asset) => asset && !sameAsset(current.assetByID[asset.id] ?? asset, asset) ? [asset] : []);
         return updates.length ? { ...current, assetByID: { ...current.assetByID, ...Object.fromEntries(updates.map((asset) => [asset.id, asset])) } } : current;
       });
     };

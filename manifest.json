@@ -9,6 +9,32 @@
   "type": "project",
   "background": "background.js",
   "ui": { "projectView": "ui/dist/index.html" },
+  "localized": {
+    "en": {
+      "name": "AI Short Films",
+      "description": "Turn research, director's style and footage production into a reviewable, reusable AI short film.",
+      "onboarding": [
+        {
+          "id": "start-short-film",
+          "title": "Start with a short-film idea",
+          "description": "Lock in the topic, style template, aspect ratio and runtime before building the research library.",
+          "prompt": "I want to make an AI short film about 【fill in the topic here】. Start by calling workflow.context, then complete only the briefing step (brief.create): ask about and save the style template, aspect ratio, expected runtime and any necessary constraints. Stop when done and wait for my confirmation before moving on to research; don't propose a creative approach, write a script, or generate any media in advance."
+        },
+        {
+          "id": "research-first",
+          "title": "Build the research library first",
+          "description": "Articles, YouTube, Xiaohongshu, Douyin and web pages become reusable research assets.",
+          "prompt": "Start by calling workflow.context. If the current stage allows research, gather enough diverse sources around the topic; for each source first call recut.media.create_reference to register it as a global reference asset — the URL is only an identity, write the full body into content, image bytes into imageData (base64), and for video platforms fill in complete metadata such as channel, duration, plays and likes — then save the assetId from the research resource together with your research conclusions. Include at least supporting evidence and limitations/counterexamples, then stop after saving so I can judge whether the research is sufficient; never propose a creative approach or generate media in advance."
+        },
+        {
+          "id": "continue-workflow",
+          "title": "Continue the current project",
+          "description": "Read the project state first, then only advance the single allowed next step.",
+          "prompt": "Start by calling workflow.context and tell me which stage this AI short film project is at, what has already been confirmed, and the single allowed next step. Research must be confirmed by the user and the creative approach must be selected by the user; don't skip gates or redo decisions that have already been made."
+        }
+      ]
+    }
+  },
   "onboarding": [
     {
       "id": "start-short-film",

@@ -4,6 +4,24 @@
  * [POS]: vox-broll 的 UI 通信边界；业务 UI 不直接 fetch、访问终端或 SQLite，实时事件由宿主转发，Agent 内容必须经全局 chat 可见
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
+import { useEffect, useState } from "react";
+
+export type Locale = "zh" | "en";
+
+export function getRecutLocale(): Locale {
+  const requested = new URLSearchParams(location.search).get("locale");
+  if (requested === "zh" || requested === "en") return requested;
+  return (navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+export function useRecutLocale(): Locale {
+  const [locale] = useState<Locale>(getRecutLocale);
+  useEffect(() => {
+    document.documentElement.lang = locale === "en" ? "en" : "zh";
+  }, [locale]);
+  return locale;
+}
+
 type RequestType = "state.query" | "background.call" | "agent.compose" | "page.context" | "media.pick";
 type Request = { id: string; type: RequestType; input: Record<string, unknown> };
 let port: MessagePort | null = null;
