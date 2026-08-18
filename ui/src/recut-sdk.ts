@@ -22,7 +22,7 @@ export function useRecutLocale(): Locale {
   return locale;
 }
 
-type RequestType = "state.query" | "background.call" | "agent.compose" | "page.context" | "media.pick";
+type RequestType = "state.query" | "background.call" | "agent.compose" | "focus.report" | "page.context" | "media.pick";
 type Request = { id: string; type: RequestType; input: Record<string, unknown> };
 let port: MessagePort | null = null;
 let resolveConnection: ((nextPort: MessagePort) => void) | null = null;
@@ -93,12 +93,16 @@ export const recut = {
   media: {
     pick: (input: { kinds: Array<"image" | "video" | "audio" | "transcript" | "reference">; multiple?: boolean; selectedIDs?: string[] }) => call("media.pick", input),
   },
-  page: {
+	page: {
     // 上报当前编辑页面的结构化上下文；Host 会在用户发送消息时自动附带为
     // type=page 的上下文（可在 Composer 移除）。
-    context: (context: { title: string; path?: string; url?: string; selection?: string; content?: string }) =>
-      call("page.context", { context }),
-  },
+		context: (context: { title: string; path?: string; url?: string; selection?: string; content?: string }) =>
+			call("page.context", { context }),
+	},
+	focus: {
+		report: (focus: { view?: string; selection?: Array<{ kind: "timeline_element" | "timeline_track" | "component" | "asset" | "world_entity" | "world_evidence"; id: string }>; selectionState?: Record<string, unknown>; cursor?: { kind: "time"; seconds: number } | { kind: "none" }; state?: Record<string, unknown>; summary?: string }) =>
+			call("focus.report", { focus }),
+	},
   events: { subscribe: (listener: (event: unknown) => void) => {
     const receive = (event: Event) => listener((event as CustomEvent<unknown>).detail);
     window.addEventListener("recut-project-event", receive);
