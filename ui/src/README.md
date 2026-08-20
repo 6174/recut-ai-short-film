@@ -15,7 +15,7 @@ video-frame.tsx: 视频预览原子；缩略图将静音循环 `<video>` 写入 
 timeline-export.tsx: 成片交付专用的两轨确定性时间线；选择已有场景视频与声音设计，按顺序排列、浏览器预览并以尺寸/帧率/画质设置调用 `delivery.export` 生成新的视频素材；片段 ID 不依赖安全上下文 UUID，错误时只将环境诊断交给 Codex。
 recut-sdk.ts: iframe 与宿主的 MessageChannel 边界；在 10 秒内向父页面重试声明就绪并等待连接，再发送请求；请求 ID 不依赖安全上下文 UUID，记录连接、请求、回包或错误并发布项目事件。
 ui.tsx: 基于 Tailwind、Radix Dialog / Dropdown Menu 的 shadcn 风格 UI 原子。
-style.css: Tailwind v4 入口与 AI 短片创作台设计令牌；与宿主共享白底、黑字、明亮品牌绿主题。
+style.css: Tailwind v4 入口与 AI 短片创作台设计令牌；与宿主共享深色画布、浅色文字和明亮品牌绿主题。
 
 职责关系
 `main.tsx` 聚合资源状态；卡片和弹窗只接收数据与回调；`style-references.tsx` 只展示随构建复制的内置风格封面；`context-mentions.tsx` 只形成单次 Agent 上下文；`ui.tsx` 不了解资源业务。各创作分区不维护资源依赖，唯一顺序来自 `workflow.context`，复杂关联由 Agent 基于其 `inputs` 和临时 @ 上下文推理。

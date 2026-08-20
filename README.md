@@ -36,7 +36,7 @@ manifest.json   应用身份、AI 短片立项、权限、界面入口和操作�
 skills/vox-broll/SKILL.md  短片领域规则、资料确认/方案选定闸门、导演模板与 Remotion 交接契约
 skills/vox-broll/references/  三套风格模板的镜头、视觉、叙事、禁忌与可补充图片槽位；由 Skill 按冻结模板加载，构建后也在立项界面显示
 background.js   项目状态、资源契约、全局资料素材引用与短片交接包；立项同时写入领域记录和工作台资源
-ui/             React/Vite 创作工作台
+ui/             React/Vite 创作工作台（暗色优先，与平台及官网共享深色语义）
 ```
 
 平台提供全局素材、隔离项目状态、媒体生成、Agent 和导出能力。外部资料是可跨项目附加的全局 `reference` 素材；短片项目保存自己的资料研究、创作方案、剧本与场景方案、导演决策及其引用。跨应用使用 `recut.ai-short-film.package@1` 交接产物交接，绝不读取彼此私有数据库。
