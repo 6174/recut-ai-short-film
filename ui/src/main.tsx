@@ -112,7 +112,7 @@ function App() {
     setStatus(t(locale, "status.proposalSelected"));
   };
 
-  return <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.99_0.012_151),transparent_30rem)] p-4 sm:p-6"><div className="mx-auto max-w-[1440px]">
+  return <main className="min-h-screen p-4 sm:p-6"><div className="mx-auto max-w-[1440px]">
     <header className="mb-4 flex items-end justify-between gap-6 border-b border-border/80 pb-4"><div><p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">{t(locale, "header.kicker")}</p><h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">{t(locale, "header.title")}</h1><p className="mt-1 text-sm text-muted-foreground">{t(locale, "header.subtitle")}</p><p className="mt-1 font-mono text-[10px] text-muted-foreground" data-testid="resource-diagnostic">{t(locale, "header.diagnostic", { text: diagnostic })}</p></div></header>
     <div className="grid gap-5 xl:grid-cols-2">
       <StagePanel onCreate={() => setCreatingStage(stages[0])} onPreview={setPreview} resources={resourcesFor(stages[0])} stage={stages[0]} />
