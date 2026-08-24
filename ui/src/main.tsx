@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 React、recut UI SDK、共享 Asset SSE 缓存、资源卡片、资源弹窗与同级 Skill 风格参考图
  * [OUTPUT]: 对外提供 AI 短片多面板工作台、立项/资料研究人工确认闸门、两轨成片交付与短片交接包入口；起始表单只生成、复制并回填中文任务书，绝不提交 Agent turn，刷新后按资源 ID 同步已打开详情
- * [POS]: vox-broll 的项目 UI 编排层；将风格、资料、方案、剧本和生成媒体放在一条不可跳步的创作链上；立项时展示构建自 Skill 同级 references 的本地风格参考图，为资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API
+ * [POS]: ai-short-film 的项目 UI 编排层；将风格、资料、方案、剧本和生成媒体放在一条不可跳步的创作链上；立项时展示构建自 Skill 同级 references 的本地风格参考图，为资源预览建立唯一 Asset SSE 缓存，最终阶段只调用 background API
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { createRoot } from "react-dom/client";
@@ -45,18 +45,18 @@ function App() {
   const [diagnostic, setDiagnostic] = useState(t(locale, "status.waitingForConnection"));
   const refresh = async () => {
     setDiagnostic(t(locale, "status.requestingResources"));
-    console.warn("[vox-broll] resource refresh started");
+    console.warn("[ai-short-film] resource refresh started");
     try {
       const nextResources = await recut.state.query("resource.list");
       setResources(nextResources);
       setProjectBriefOpen(nextResources.length === 0);
       setPreview((current) => current ? (nextResources as Resource[]).find((resource) => resource.id === current.id) ?? null : null);
       setDiagnostic(t(locale, "status.resourcesSynced", { count: nextResources.length }));
-      console.warn(`[vox-broll] resource refresh completed count=${nextResources.length}`);
+      console.warn(`[ai-short-film] resource refresh completed count=${nextResources.length}`);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : t(locale, "status.unknownError");
       setDiagnostic(t(locale, "status.syncFailed", { message }));
-      console.error("[vox-broll] resource refresh failed", cause);
+      console.error("[ai-short-film] resource refresh failed", cause);
     }
   };
 
@@ -64,7 +64,7 @@ function App() {
     window.addEventListener("recut-sdk-ready", refresh);
     const unsubscribe = recut.events.subscribe((event) => {
       const capability = event as CapabilityEvent;
-      if (capability.type === "app.capability.completed" && capability.appId === "recut.vox-broll" && capability.kind === "operation" && ["brief.create", "resource.create", "resource.update", "research.approve", "proposal.select", "delivery.export"].includes(String(capability.name))) void refresh();
+      if (capability.type === "app.capability.completed" && capability.appId === "recut.ai-short-film" && capability.kind === "operation" && ["brief.create", "resource.create", "resource.update", "research.approve", "proposal.select", "delivery.export"].includes(String(capability.name))) void refresh();
     });
     return () => { window.removeEventListener("recut-sdk-ready", refresh); unsubscribe(); };
   }, []);

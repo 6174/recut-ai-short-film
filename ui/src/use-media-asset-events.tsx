@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖浏览器 EventSource 与 Recut `/v1/media/events` 的资产快照/增量事件契约
  * [OUTPUT]: 对外提供 MediaAssetEventsProvider、useMediaAssetEvents 与 AssetState；维护 iframe 内唯一的 Asset 生命周期缓存，并为生成中的素材补充本地状态校验
- * [POS]: vox-broll UI 的媒体状态边界；资源卡、资源详情和引用缩略图共享一条 Recut SSE；SSE 重连滞后时仅校验仍在生成的素材，不查询 Provider
+ * [POS]: ai-short-film UI 的媒体状态边界；资源卡、资源详情和引用缩略图共享一条 Recut SSE；SSE 重连滞后时仅校验仍在生成的素材，不查询 Provider
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";

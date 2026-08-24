@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Resource 类型、共享 Asset SSE 缓存与 React 图文展示原语
  * [OUTPUT]: 对外提供按 AI 短片阶段渲染的人类可读资源摘要、缩略文本、带生成耗时的 iframe 视频预览、图片与按需音视频播放器详情；立项同时呈现风格/画幅/时长，资料研究/创作方案/剧本与场景方案显示其审核与场景清单，兼容顶层和历史嵌套视频引用
- * [POS]: vox-broll 的资源展示语义层；将导演配置、研究资料、方案、剧本与生成媒体翻译为图文，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata
+ * [POS]: ai-short-film 的资源展示语义层；将导演配置、研究资料、方案、剧本与生成媒体翻译为图文，所有异步 Asset 由共享缓存驱动并在真实生成态显示计时，终态只读取后端 generation metadata
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useEffect, useState } from "react";

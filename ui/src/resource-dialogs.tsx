@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Resource 类型、状态感知资源展示、同级 Skill 风格参考图、lucide 图标与 shadcn 风格弹窗组件
  * [OUTPUT]: 对外提供 iframe 内受控资源详情模态框、资料确认/方案选定人工闸门与带内置风格参考图的新建资源弹窗；立项表单收集选题、风格、画幅与时长，并只构建可复制的中文任务书
- * [POS]: vox-broll 的短暂交互层；只收集本阶段的创作意图，不建立 section 间的资源依赖；立项时预览可选风格的同级 references 图片，复杂上下文由 Agent 从 workflow.context 推理
+ * [POS]: ai-short-film 的短暂交互层；只收集本阶段的创作意图，不建立 section 间的资源依赖；立项时预览可选风格的同级 references 图片，复杂上下文由 Agent 从 workflow.context 推理
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { LoaderCircle, Sparkles } from "lucide-react";

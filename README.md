@@ -8,7 +8,7 @@
 2. 在 **Apps** tab 粘贴以下 HTTPS 地址并安装：
 
    ```text
-   https://github.com/6174/recut-vox-broll
+   https://github.com/6174/recut-ai-short-film
    ```
 
 3. 切到 **Project** tab，新建项目时选择 **AI 短片**，填写选题、风格模板、画幅和预期时长（30/60/90/120 秒或自定义），然后点击“复制任务书并填入 Agent”。任务书会复制并回填右侧输入框，只有你点击发送后 Agent 才会开始工作。
@@ -33,8 +33,8 @@ App 会按以下顺序引导创作，不会把未确认的想法误当成成片�
 
 ```text
 manifest.json   应用身份、AI 短片立项、权限、界面入口和操作契约
-skills/vox-broll/SKILL.md  短片领域规则、资料确认/方案选定闸门、导演模板与 Remotion 交接契约
-skills/vox-broll/references/  三套风格模板的镜头、视觉、叙事、禁忌与可补充图片槽位；由 Skill 按冻结模板加载，构建后也在立项界面显示
+skills/ai-short-film/SKILL.md  短片领域规则、资料确认/方案选定闸门、导演模板与 Remotion 交接契约
+skills/ai-short-film/references/  三套风格模板的镜头、视觉、叙事、禁忌与可补充图片槽位；由 Skill 按冻结模板加载，构建后也在立项界面显示
 background.js   项目状态、资源契约、全局资料素材引用与短片交接包；立项同时写入领域记录和工作台资源
 ui/             React/Vite 创作工作台（暗色优先，与平台及官网共享深色语义）
 ```
@@ -46,19 +46,19 @@ ui/             React/Vite 创作工作台（暗色优先，与平台及官网�
 ## 开发此 App
 
 ```sh
-git clone git@github.com:6174/recut-vox-broll.git
-cd recut-vox-broll/ui
+git clone git@github.com:6174/recut-ai-short-film.git
+cd recut-ai-short-film/ui
 npm ci
 npm run build
 ```
 
-在 Recut 主仓库中，本 App 作为 `apps/vox-broll` submodule 固定。初始化主仓库时运行：
+在 Recut 主仓库中，本 App 作为 `apps/ai-short-film` submodule 固定。初始化主仓库时运行：
 
 ```sh
 git submodule update --init --recursive
-make app-link APP=apps/vox-broll
+make app-link APP=apps/ai-short-film
 ```
 
-`manifest.json` 是运行时契约；`skills/vox-broll/SKILL.md` 是 Agent 的领域指南。修改业务行为或资源契约时，同时更新它们与本 README，保持用户路径、领域规则和实现一致。
+`manifest.json` 是运行时契约；`skills/ai-short-film/SKILL.md` 是 Agent 的领域指南。修改业务行为或资源契约时，同时更新它们与本 README，保持用户路径、领域规则和实现一致。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 README.md

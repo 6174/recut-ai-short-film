@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖媒体内容 URL 与浏览器原生 iframe 媒体文档
  * [OUTPUT]: 对外提供 VideoFrame；缩略图以 srcDoc iframe 展示静音循环视频，详情以 iframe 打开原始媒体 URL
- * [POS]: vox-broll UI 的视频画面原子；资源卡、引用缩略图和资源详情共用，隔离媒体解码与卡片交互
+ * [POS]: ai-short-film UI 的视频画面原子；资源卡、引用缩略图和资源详情共用，隔离媒体解码与卡片交互
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 

@@ -1,6 +1,6 @@
 # images/
 
-> L2 | 父级: /apps/vox-broll/skills/vox-broll/references/README.md
+> L2 | 父级: /apps/ai-short-film/skills/ai-short-film/references/README.md
 
 这里是创作台给用户选择模板时显示的内置风格封面槽位。它不是生成参考图，也不参与 Agent 的具体画面推理；每张必须拥有明确的使用授权。
 

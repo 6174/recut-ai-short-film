@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖 React 状态与 skills/vox-broll/references/images 的约定文件名
+ * [INPUT]: 依赖 React 状态与 skills/ai-short-film/references/images 的约定文件名
  * [OUTPUT]: 对外提供内置 AI 短片风格模板、可点击封面选择器及本地封面缺失时的可读回退
- * [POS]: vox-broll UI 的模板展示数据；与后端冻结的 template id 对齐，只消费随构建复制的静态风格封面，不参与 section 工作流依赖
+ * [POS]: ai-short-film UI 的模板展示数据；与后端冻结的 template id 对齐，只消费随构建复制的静态风格封面，不参与 section 工作流依赖
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useState } from "react";

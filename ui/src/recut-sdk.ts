@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Host 注入的 MessageChannel，并向 Host 发出可重试的 UI 就绪握手
  * [OUTPUT]: 对外提供等待 Host MessageChannel 就绪、不依赖安全上下文 UUID、带通信诊断日志的 iframe React UI SDK、只回填不提交的 Agent compose 请求、当前页面上下文上报与项目事件订阅
- * [POS]: vox-broll 的 UI 通信边界；业务 UI 不直接 fetch、访问终端或 SQLite，实时事件由宿主转发，Agent 内容必须经全局 chat 可见
+ * [POS]: ai-short-film 的 UI 通信边界；业务 UI 不直接 fetch、访问终端或 SQLite，实时事件由宿主转发，Agent 内容必须经全局 chat 可见
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { useEffect, useState } from "react";

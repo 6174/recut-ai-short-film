@@ -4,7 +4,7 @@ import { relative, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-const referenceImagesRoot = resolve(import.meta.dirname, "../skills/vox-broll/references/images");
+const referenceImagesRoot = resolve(import.meta.dirname, "../skills/ai-short-film/references/images");
 
 async function imageFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });

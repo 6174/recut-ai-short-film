@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 AI 短片场景视频/声音设计资源、共享 Asset 预览与平台 delivery.export API
  * [OUTPUT]: 对外提供不依赖安全上下文 UUID 的固定视频轨、固定音频轨、顺序预览和基础编码设置的确定性导出工作台
- * [POS]: vox-broll 成片交付阶段的专用编辑器；只装配已有素材，不把导出意图交给 Agent 创作
+ * [POS]: ai-short-film 成片交付阶段的专用编辑器；只装配已有素材，不把导出意图交给 Agent 创作
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { ChevronDown, ChevronUp, Download, LoaderCircle, Music2, Plus, Trash2, Video } from "lucide-react";

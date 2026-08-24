@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 AI 短片 Resource、资源卡片与 UI 原子
  * [OUTPUT]: 对外提供工作台中的带边框创作分区
- * [POS]: vox-broll 的工作台布局单元；每个分区以统一卡片边界承载标题、资源画布和创建入口
+ * [POS]: ai-short-film 的工作台布局单元；每个分区以统一卡片边界承载标题、资源画布和创建入口
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { Plus } from "lucide-react";

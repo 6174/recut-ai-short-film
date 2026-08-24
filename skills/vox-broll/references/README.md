@@ -1,6 +1,6 @@
 # references/
 
-> L2 | 父级: /apps/vox-broll/skills/vox-broll/SKILL.md
+> L2 | 父级: /apps/ai-short-film/skills/ai-short-film/SKILL.md
 
 成员清单
 editorial-vox.md: Vox 编辑解说模板；纸质拼贴、证据递进、信息图镜头与反模板化约束。

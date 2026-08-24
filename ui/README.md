@@ -1,6 +1,6 @@
 # ui/
 
-> L2 | 父级: /apps/vox-broll/README.md
+> L2 | 父级: /apps/ai-short-film/README.md
 
 成员清单
 package.json: Vite、React、Tailwind、Radix Dialog / Dropdown Menu 与 shadcn 风格组件的独立构建配置。

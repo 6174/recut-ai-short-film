@@ -1,7 +1,7 @@
 /*
  * [INPUT]: 依赖平台注入的 ctx.sqlite（appstate/<appId>/storage.sqlite，全局 + 所有 Project 共用一个库）、ctx.artifacts 与受限 ctx.media.compose capability
  * [OUTPUT]: 注册 AI 短片的立项、资料确认、方案选定、剧本/镜头、媒体资源、可供 Remotion 消费的短片交接包与两轨确定性成片交付 App API 与 MCP 工具处理器
- * [POS]: vox-broll 的唯一业务后端；briefs/resources 以 project_id 分区，资源彼此不保存依赖关系，风格模板在立项时冻结为导演配置，单线 workflow.context 是唯一流程真相，复杂上下文由 Agent 读取当前阶段输入后推理
+ * [POS]: ai-short-film 的唯一业务后端；briefs/resources 以 project_id 分区，资源彼此不保存依赖关系，风格模板在立项时冻结为导演配置，单线 workflow.context 是唯一流程真相，复杂上下文由 Agent 读取当前阶段输入后推理
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 

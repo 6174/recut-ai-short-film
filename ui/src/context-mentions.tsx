@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 React、recut media.pick 桥接、当前 AI 短片项目资源与 lucide 图标
  * [OUTPUT]: 对外提供带 @ 当前项目条目和 @ 系统素材的临时上下文输入框及可移除引用 token
- * [POS]: vox-broll 的一次性 Agent 上下文层；选择只进入 resource.prepare 的任务书，不写入资源、不构成 section 依赖
+ * [POS]: ai-short-film 的一次性 Agent 上下文层；选择只进入 resource.prepare 的任务书，不写入资源、不构成 section 依赖
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import { AtSign, Database, FolderKanban, X } from "lucide-react";

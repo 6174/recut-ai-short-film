@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 React、Radix Dialog / Dropdown Menu、Tailwind CSS 与 lucide 图标
  * [OUTPUT]: 对外提供 Button、Dialog、Dropdown Menu、Badge、Textarea 等 shadcn 风格原子
- * [POS]: vox-broll 的本地 UI 原子层；供资源卡片、弹窗和根视图复用
+ * [POS]: ai-short-film 的本地 UI 原子层；供资源卡片、弹窗和根视图复用
  * [PROTOCOL]: 变更时更新此头部，然后检查 README.md
  */
 import * as DialogPrimitive from "@radix-ui/react-dialog";

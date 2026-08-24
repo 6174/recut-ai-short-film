@@ -1,10 +1,10 @@
 {
   "manifestVersion": 1,
-  "id": "recut.vox-broll",
+  "id": "recut.ai-short-film",
   "name": "AI 短片",
   "author": "6174",
   "description": "把资料研究、导演风格与镜头生产收束成可审阅、可复用的 AI 短片。",
-  "repository": "https://github.com/6174/recut-vox-broll",
+  "repository": "https://github.com/6174/recut-ai-short-film",
   "version": "0.15.0",
   "type": "project",
   "background": "background.js",
