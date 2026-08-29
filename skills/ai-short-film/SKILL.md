@@ -9,7 +9,7 @@ description: 将选题制作成可研究、可评审、可生成并可交给 Rem
 
 ## 先读状态，再做唯一允许的事
 
-每次创作动作前调用 `workflow.context`。它是唯一真相源：决定当前阶段、风格模板、已确认资源和 `allowedActions`。不得用聊天记忆跳过资料确认或方案选定。
+进入工作会话时调用一次 `workflow.context`，此后同一会话（含 resume 续跑）复用快照，不因新消息重复调用。它是阶段、风格模板、已确认资源和 `allowedActions` 的真相源；阶段推进以 `resource.create` / `research_approve` / `proposal_select` 等操作的返回值为准滚动更新。人工闸门由服务端强制：即使记忆过期，在错误阶段写入也会被拒绝并返回真实阶段，按返回值修正即可，不要预防性重读。仅在返回阶段不符、契约失效、用户说在 UI 改过、或切换 Project 时回读。
 
 ```text
 立项 → 资料研究 → [用户确认资料] → 创作方案 → [用户选定方案]
@@ -56,7 +56,7 @@ description: 将选题制作成可研究、可评审、可生成并可交给 Rem
 
 图片生成必须先读取当前平台配置；使用 `recut.image.generate` 提交异步 job，立即取得稳定 jobId 与排队中 assetId，用 `recut.media.wait_for_job` 等它 `completed` 后再进入视觉设定或关键画面；或使用宿主的原生图片能力。原生图片必须经 `recut.media.import_image` 归档，只有真实且已完成的素材 ID 才能进入视觉设定或关键画面。绝不把排队中/生成中的素材当作已完成。
 
-声音设计的每个场景必须拥有真实旁白素材。使用 `recut.media.list_voices → recut.speech.generate`，等待终态后保存。场景视频一次默认只生产一个：以对应关键画面与声音设计的素材 ID 调用 `recut.video.generate`；视频提示词必须逐字包含旁白并声明参考音频为唯一人声，禁止新增语言。提交成功后立刻用稳定的排队中素材 ID 创建独立场景视频资源。
+声音设计的每个场景必须拥有真实旁白素材。音色列表每个会话读一次（`recut.media.list_voices`，已有就直接复用），再 `recut.speech.generate`，等待终态后保存。场景视频一次默认只生产一个：以对应关键画面与声音设计的素材 ID 调用 `recut.video.generate`；视频提示词必须逐字包含旁白并声明参考音频为唯一人声，禁止新增语言。提交成功后立刻用稳定的排队中素材 ID 创建独立场景视频资源。
 
 不要用 HyperFrames、ffmpeg、浏览器自动化或本地渲染替代媒体生成。最终成片交付的两轨确定性导出是例外：由面板调用 `delivery.export → ctx.media.compose`。
 
