@@ -41,7 +41,7 @@ AI 短片是 Recut 的**叙事短片 App**（`project` 类型）。它不做一�
 ## 从想法到成片
 
 1. **立项**（`brief.create`）：填写选题、风格模板、画幅与预期时长。
-2. **资料研究**（`resource.create: research`）：检索多源资料，每条先 `recut.media.create_reference` 登记为全局素材。
+2. **资料研究**（`resource.create: research`）：检索多源资料，每条先 `recut.media.import` 登记为全局素材。
 3. **确认资料**（`research.approve`）→ **创作方案**（`proposals`）→ **选定方案**（`proposal.select`）。
 4. **剧本与场景方案 → 视觉设定 → 关键画面 → 声音设计 → 场景视频**：逐段生成与审阅，默认每次只做下一段 Scene。
 5. **成片交付**（`delivery.export`）与 **交接包**（`film.package`）：确定性导出成片，发布可复用交接产物。
@@ -51,7 +51,7 @@ AI 短片是 Recut 的**叙事短片 App**（`project` 类型）。它不做一�
 | 能力 | 你能做什么 | 关键操作 |
 | --- | --- | --- |
 | **立项与上下文** | 冻结选题/风格/画幅/时长，读取唯一下一步与阶段契约 | `brief.create` · `workflow.context` |
-| **资料研究** | 登记全局 reference 素材，保存研究结论 | `recut.media.create_reference` → `resource.create: research` · `research.approve` |
+| **资料研究** | 登记全局 reference 素材，保存研究结论 | `recut.media.import` → `resource.create: research` · `research.approve` |
 | **方案与剧本** | 多方案对比选定，细化为约 5 秒场景计划 | `resource.create: proposals/script` · `proposal.select` |
 | **镜头与声音** | 视觉设定、关键画面、声音设计、场景视频分步生成 | `resource.create: look/keyframes/audio/scenes` · `resource.update` |
 | **交付与交接** | 确定性成片导出，发布交接包 | `delivery.export` · `film.package` |

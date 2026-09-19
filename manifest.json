@@ -24,7 +24,7 @@
           "id": "research-first",
           "title": "Build the research library first",
           "description": "Articles, YouTube, Xiaohongshu, Douyin and web pages become reusable research assets.",
-          "prompt": "Start by calling workflow.context. If the current stage allows research, gather enough diverse sources around the topic; for each source first call recut.media.create_reference to register it as a global reference asset — the URL is only an identity, write the full body into content, image bytes into imageData (base64), and for video platforms fill in complete metadata such as channel, duration, plays and likes — then save the assetId from the research resource together with your research conclusions. Include at least supporting evidence and limitations/counterexamples, then stop after saving so I can judge whether the research is sufficient; never propose a creative approach or generate media in advance."
+          "prompt": "Start by calling workflow.context. If the current stage allows research, gather enough diverse sources around the topic; for each source first call recut.media.import to register it as a global reference asset — the URL is only an identity, write the full body into content, image bytes into imageData (base64), and for video platforms fill in complete metadata such as channel, duration, plays and likes — then save the assetId from the research resource together with your research conclusions. Include at least supporting evidence and limitations/counterexamples, then stop after saving so I can judge whether the research is sufficient; never propose a creative approach or generate media in advance."
         },
         {
           "id": "continue-workflow",
@@ -46,7 +46,7 @@
       "id": "research-first",
       "title": "先建立研究资料库",
       "description": "文章、YouTube、小红书、抖音和网页先变成可复用资料资产。",
-      "prompt": "请先调用 workflow.context。若当前阶段允许资料研究，请围绕选题检索足够多且不同类型的资料；每条资料先调用 recut.media.create_reference 登记为全局 reference 素材——URL 只是身份，正文全文写入 content、图片字节写入 imageData（base64）、视频平台补齐频道/时长/播放/点赞等完整元数据，再保存资料研究资源中的 assetId 和研究结论。至少包含支持证据与限制/反例，保存后停下让我判断资料是否足够；绝不提前提出创作方案或生成媒体。"
+      "prompt": "请先调用 workflow.context。若当前阶段允许资料研究，请围绕选题检索足够多且不同类型的资料；每条资料先调用 recut.media.import 登记为全局 reference 素材——URL 只是身份，正文全文写入 content、图片字节写入 imageData（base64）、视频平台补齐频道/时长/播放/点赞等完整元数据，再保存资料研究资源中的 assetId 和研究结论。至少包含支持证据与限制/反例，保存后停下让我判断资料是否足够；绝不提前提出创作方案或生成媒体。"
     },
     {
       "id": "continue-workflow",

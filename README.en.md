@@ -41,7 +41,7 @@ Phases don't depend on each other via section links; `workflow.context` gives th
 ## From idea to finished film
 
 1. **Brief** (`brief.create`): topic, style template, aspect ratio, expected duration.
-2. **Research** (`resource.create: research`): register each source via `recut.media.create_reference`.
+2. **Research** (`resource.create: research`): register each source via `recut.media.import`.
 3. **Approve** (`research.approve`) → **Proposals** → **Select** (`proposal.select`).
 4. **Script & scenes → look → keyframes → audio → scenes**: generate and review one scene at a time.
 5. **Delivery** (`delivery.export`) & **handoff** (`film.package`).
@@ -51,7 +51,7 @@ Phases don't depend on each other via section links; `workflow.context` gives th
 | Capability | What you can do | Key operations |
 | --- | --- | --- |
 | **Brief & context** | Lock topic/style/ratio/duration, read next step & contracts | `brief.create` · `workflow.context` |
-| **Research** | Register global references, save conclusions | `recut.media.create_reference` → `resource.create: research` · `research.approve` |
+| **Research** | Register global references, save conclusions | `recut.media.import` → `resource.create: research` · `research.approve` |
 | **Proposals & script** | Compare proposals, refine into ~5s beats | `resource.create: proposals/script` · `proposal.select` |
 | **Look & media** | Look, keyframes, audio, scene videos step by step | `resource.create: look/keyframes/audio/scenes` · `resource.update` |
 | **Delivery & handoff** | Deterministic export, publish handoff package | `delivery.export` · `film.package` |
